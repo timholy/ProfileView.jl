@@ -1,6 +1,6 @@
 module ProfileView
 
-using Tk, Color
+using Tk, Color, Base.Graphics
 import Cairo
 
 import Base: first, show
@@ -28,6 +28,7 @@ function profview(data = Profile.fetch(); C = true)
     cs = linspace(-100,100,15)
     hs = linspace(0,340,20)
     bkg = color("black")
+    fontcolor = color("white")
     colors = convert(Array{RGB}, distinguishable_colors(20, identity, bkg, ls, cs, hs))
     rows = {fill(bkg, w)}
     tags = {fill(0, w)}
@@ -35,72 +36,62 @@ function profview(data = Profile.fetch(); C = true)
     buildimg!(rows, tags, nodelist, g, 1, colors[2:end], bkg)
     img = hcat(rows...)
     imgtags = hcat(tags...)
-    @show size(imgtags)
     img32 = [convert(Uint32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
+    imw = size(img32,2)
+    imh = size(img32,1)
     # Display in a window
     win = Toplevel("Profile", 300, 300)
     f = Frame(win)
     pack(f, expand = true, fill = "both")
     c = Canvas(f)
     pack(c, expand = true, fill = "both")
-    c.resize = function (_)
+    function redraw(c)
         ctx = getgc(c)
         w = width(c)
         h = height(c)
-        imw = size(img32,2)
-        imh = size(img32,1)
-        Base.Graphics.set_coords(ctx, 0, 0, w, h, 0, imw, 0, imh)
-#         Cairo.image(ctx, Cairo.CairoRGBSurface(img32), 0, 0, 1, 1)
+        set_coords(ctx, 0, 0, w, h, 0, imw, 0, imh)
+        # We do much of the work in Cairo.image() because we want to use FILTER_NEAREST
         surf = Cairo.CairoRGBSurface(img32)
-        @show imw
-        @show imh
-        @show surf.width
-        @show surf.height
-        Base.Graphics.rectangle(ctx, 0, 0, imw, imh)
-        Base.Graphics.save(ctx)
-        Base.Graphics.scale(ctx, imw/surf.width, imh/surf.height)
-        Base.Graphics.set_source(ctx, surf)
+        rectangle(ctx, 0, 0, imw, imh)
+        save(ctx)
+        scale(ctx, imw/surf.width, imh/surf.height)
+        set_source(ctx, surf)
         p = Cairo.get_source(ctx)
-        @show surf
-        @show p
         Cairo.pattern_set_filter(p, Cairo.CAIRO_FILTER_NEAREST)
-        Base.Graphics.fill(ctx)
-        Base.Graphics.restore(ctx)
+        fill_preserve(ctx)
+        restore(ctx)
+    end
+    function gettag(xu, yu)
+        x = iround(xu)
+        y = iround(yu)
+        Y = size(imgtags, 2)
+        x = max(1, min(x, size(imgtags, 1)))
+        y = max(1, min(y, Y))
+        imgtags[x,Y-y+1]
+    end
+    c.resize = function (_)
+        redraw(c)
+        reveal(c)
+        Tk.update()
+    end
+    c.mouse.motion = function (c, xd, yd)
+        # Repair image from ovewritten text
+        redraw(c)
+        # Write the info
+        ctx = getgc(c)
+        xu, yu = device_to_user(ctx, xd, yd)
+        indx = gettag(xu, yu)
+        if indx > 0
+            node = nodelist[indx]
+            str = string(node.file, ", ", node.func, ": line ", node.line)
+            set_source(ctx, fontcolor)
+            Cairo.text(ctx, xu, yu, str, 10, xu < imw/3 ? "left" : xu < 2imw/3 ? "center" : "right", "bottom", 0)
+        end
         reveal(c)
         Tk.update()
     end
     set_size(win, 300, 300)
-    ctxcopy = copy(getgc(c))
-#     Cairo.reset_transform(ctxcopy)
-    c.mouse.motion = function (c, xd, yd)
-        ctx = getgc(c)
-        # Recover any damage
-        Base.Graphics.save(ctx)
-        Cairo.reset_transform(ctx)
-        Base.Graphics.set_source(ctx, ctxcopy)
-        Base.Graphics.paint(ctx)
-        Base.Graphics.restore(ctx)
-        # Write the info
-        xu, yu = Base.Graphics.device_to_user(ctx, xd, yd)
-        x = iround(xu)
-        y = iround(yu)
-#         println("x = $x, y = $y")
-        Y = size(imgtags, 2)
-        x = max(1, min(x, size(imgtags, 1)))
-        y = max(1, min(y, Y))
-        indx = imgtags[x,Y-y+1]
-        if indx > 0
-            node = nodelist[indx]
-            str = string(node.file, ", ", node.func, ": line ", node.line)
-            println(str)
-#             println(xu, ", ", yu)
-            Cairo.text(ctx, xu, yu, str, 10, "left", "bottom", 0)
-            reveal(c)
-            Tk.update()
-        end
-    end
     c.resize(c)
-#     @show ctxcopy
 end
 
 type Node
