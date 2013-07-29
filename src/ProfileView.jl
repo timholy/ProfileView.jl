@@ -1,5 +1,15 @@
 module ProfileView
 
+include("tree.jl")
+include("pvtree.jl")
+
+using .Tree
+using .PVTree
+
+# TODO:
+# Implement combine
+# Profile its performance, it may be slow
+
 using Tk, Color, Base.Graphics
 import Cairo
 
@@ -7,35 +17,57 @@ import Base: first, show
 
 export profview
 
-function profview(data = Profile.fetch(); C = true)
+immutable TagData
+    ip::Uint
+    status::Int
+end
+TagData(ip::Integer, status::Integer) = TagData(uint(ip), int(status))
+const TAGNONE = TagData(0, -1)
+
+function profview(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, combine = true)
     bt, counts = Profile.tree_aggregate(data)
     if isempty(counts)
         Profile.warning_empty()
         return
     end
-    level = 0
     len = Int[length(x) for x in bt]
     keep = len .> 0
     bt = bt[keep]
     counts = counts[keep]
-    # Initialize the graph
+    # Do code address lookups on all unique instruction pointers
+    uip = unique(vcat(bt...))
+    nuip = length(uip)
+    lkupdict = Dict(uip, 1:nuip)
+    lkupC = [Profile.lookup(ip, true) for ip in uip]
+    lkupJ = [Profile.lookup(ip, false) for ip in uip]
+    lidict = Dict(uip, lkupC)
+    isjl = Dict(uip, [lkupC[i].line == lkupJ[i].line for i = 1:nuip])
+    isgc = Dict(uip, [lkupC[i].func == "jl_gc_collect" for i = 1:nuip])
+    isjl[uint(0)] = false  # needed for root below
+    isgc[uint(0)] = false
+    p = Profile.liperm(lkupC)
+    pp = sortperm(p)
+    ip2so = Dict(uip, pp)
+    so2ip = Dict(pp, uip)
+    # Build the graph
+    level = 0
     w = sum(counts)
-    g = Node(1:w)
-    # Build the graph recursively
-    buildgraph!(g, bt, counts, 0, C)
+    root = Tree.Node(PVData(1:w))
+    PVTree.buildgraph!(root, bt, counts, 0, ip2so, so2ip, lidict)
+#     Tree.showedges(STDOUT, root, x -> string(get(lidict, x.ip, "root"), ", hspan = ", x.hspan, ", status = ", x.status))
+    PVTree.prunegraph!(root, C, isjl, isgc)
+    println("\nPruned:")
+#     Tree.showedges(STDOUT, root, x -> string(get(lidict, x.ip, "root"), " status = ", x.status))
     # Generate a "tagged" image
-    ls = linspace(0,100,15)
-    cs = linspace(-100,100,15)
-    hs = linspace(0,340,20)
+    rowtags = {fill(TAGNONE, w)}
+    buildtags!(rowtags, root, 1) # , colors[4:end], bkg)
+    imgtags = hcat(rowtags...)
+    @show size(imgtags)
     bkg = color("black")
     fontcolor = color("white")
-    colors = convert(Array{RGB}, distinguishable_colors(20, identity, bkg, ls, cs, hs))
-    rows = {fill(bkg, w)}
-    tags = {fill(0, w)}
-    nodelist = Array(Node, 0)
-    buildimg!(rows, tags, nodelist, g, 1, colors[2:end], bkg)
-    img = hcat(rows...)
-    imgtags = hcat(tags...)
+    gccolor = color("red")
+    colors = distinguishable_colors(13, [bkg,fontcolor,gccolor])
+    img = buildimg(imgtags, colors[4:end], bkg, gccolor, colorgc)
     img32 = [convert(Uint32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
     imw = size(img32,2)
     imh = size(img32,1)
@@ -44,13 +76,13 @@ function profview(data = Profile.fetch(); C = true)
     f = Frame(win)
     pack(f, expand = true, fill = "both")
     c = Canvas(f)
-    pack(c, expand = true, fill = "both")
+    pack(c, expand = true, fill = "both")    
     function redraw(c)
         ctx = getgc(c)
         w = width(c)
         h = height(c)
         set_coords(ctx, 0, 0, w, h, 0, imw, 0, imh)
-        # We do much of the work in Cairo.image() because we want to use FILTER_NEAREST
+        # We largely reimplement Cairo.image() here because we always want to use FILTER_NEAREST
         surf = Cairo.CairoRGBSurface(img32)
         rectangle(ctx, 0, 0, imw, imh)
         save(ctx)
@@ -61,9 +93,10 @@ function profview(data = Profile.fetch(); C = true)
         fill_preserve(ctx)
         restore(ctx)
     end
+    # From a given position, find the underlying tag
     function gettag(xu, yu)
-        x = iround(xu)
-        y = iround(yu)
+        x = iceil(xu)
+        y = iceil(yu)
         Y = size(imgtags, 2)
         x = max(1, min(x, size(imgtags, 1)))
         y = max(1, min(y, Y))
@@ -74,133 +107,99 @@ function profview(data = Profile.fetch(); C = true)
         reveal(c)
         Tk.update()
     end
+    # Hover over a block and see the source line
     c.mouse.motion = function (c, xd, yd)
         # Repair image from ovewritten text
         redraw(c)
         # Write the info
         ctx = getgc(c)
         xu, yu = device_to_user(ctx, xd, yd)
-        indx = gettag(xu, yu)
-        if indx > 0
-            node = nodelist[indx]
-            str = string(node.file, ", ", node.func, ": line ", node.line)
+        tag = gettag(xu, yu)
+        if tag != TAGNONE
+            li = lidict[tag.ip]
+            str = string(basename(li.file), ", ", li.func, ": line ", li.line)
             set_source(ctx, fontcolor)
-            Cairo.text(ctx, xu, yu, str, 10, xu < imw/3 ? "left" : xu < 2imw/3 ? "center" : "right", "bottom", 0)
+            Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
+            Cairo.text(ctx, xu, yu, str, fontsize, xu < imw/3 ? "left" : xu < 2imw/3 ? "center" : "right", "bottom", 0, latex=false)
         end
         reveal(c)
         Tk.update()
+    end
+    # Right-click prints the full path, function, and line to the console
+    c.mouse.button3press = function (c, xd, yd)
+        ctx = getgc(c)
+        xu, yu = device_to_user(ctx, xd, yd)
+        tag = gettag(xu, yu)
+        if tag != TAGNONE
+            li = lidict[tag.ip]
+            println(li.file, ", ", li.func, ": line ", li.line)
+        end
     end
     set_size(win, 300, 300)
     c.resize(c)
 end
 
-type Node
-    hspan::Range1{Int}  # horizontal span in one row of the graph
-    file::ASCIIString
-    func::ASCIIString
-    line::Int
-    parent::Node
-    children::Vector{Node}
-    
-    # Contructor for the head of the tree
-    function Node(r::Range1{Int})
-        n = new(r, "", "", 0)
-        n.parent = n
-        n.children = Array(Node, 0)
-        n
-    end
-    
-    # Constructor for children
-    function Node(r::Range1{Int}, file::ASCIIString, func::ASCIIString, line::Int, p::Node)
-        n = new(r, file, func, line, p, Array(Node, 0))
-    end
-end
-
-first(n::Node) = first(n.hspan)
-
-function show(io::IO, n::Node)
-    println(io, "Profile node:")
-    println(io, "  file: ", n.file)
-    println(io, "  function: ", n.func)
-    println(io, "  line: ", n.line)
-    println(io, "  hspan: ", n.hspan)
-    if n.parent == n
-        println(io, "  <root>")
-    end
-    len = length(n.children)
-    println(io, "  ", len, len == 1 ? " child" : " children")
-end
-
-function buildgraph!(g::Node, bt::Vector{Vector{Uint}}, counts::Vector{Int}, level::Int, doCframes::Bool)
-    # Organize backtraces into groups that are identical up to this level
-    # This is like combine=true in the text-based display
-    d = (Profile.LineInfo=>Vector{Int})[]
-    for i = 1:length(bt)
-        ip = bt[i][level+1]
-        key = Profile.lookup(ip, doCframes)
-        indx = Base.ht_keyindex(d, key)
-        if indx == -1
-            d[key] = [i]
-        else
-            push!(d.vals[indx], i)
-        end
-    end
-    # Generate counts
-    dlen = length(d)
-    lilist = Array(Profile.LineInfo, dlen)
-    group = Array(Vector{Int}, dlen)
-    n = Array(Int, dlen)
-    i = 1
-    for (key, v) in d
-        lilist[i] = key
-        group[i] = v
-        n[i] = sum(counts[v])
-        i += 1
-    end
-    # Order the line information
-    p = Profile.liperm(lilist)
-    lilist = lilist[p]
-    group = group[p]
-    n = n[p]
-    # Generate the children
-    s = first(g)
-    for i = 1:length(n)
-        li = lilist[i]
-        push!(g.children, Node(s:(s+n[i]-1), li.file, li.func, li.line, g))
-        s += n[i]
-    end
-    # Recurse to the next level
-    len = Int[length(x) for x in bt]
-    for i = 1:length(lilist)
-        idx = group[i]
-        keep = len[idx] .> level+1
-        if any(keep)
-            idx = idx[keep]
-            buildgraph!(g.children[i], bt[idx], counts[idx], level+1, doCframes)
-        end
-    end
-end
-
-function buildimg!(rows, tags, nodelist, g, level, colors, bkg)
-    if isempty(g.children)
+function buildtags!(rowtags, parent, level)
+    if isleaf(parent)
         return
     end
-    w = length(rows[1])
-    if length(rows) < level
-        push!(rows, fill(bkg, w))
-        push!(tags, fill(0, w))
+    w = length(rowtags[1])
+    if length(rowtags) < level
+        push!(rowtags, fill(TAGNONE, w))
     end
-    r = rows[level]
-    t = tags[level]
-    colorlen = int(length(colors)/2)
-    coloroffset = colorlen*iseven(level)
-    for i = 1:length(g.children)
-        c = g.children[i]
-        r[c.hspan] = colors[mod1(i,colorlen)+coloroffset]
-        push!(nodelist, c)
-        t[c.hspan] = length(nodelist)
-        buildimg!(rows, tags, nodelist, c, level+1, colors, bkg)
+    t = rowtags[level]
+    for c in parent
+        t[c.data.hspan] = TagData(c.data.ip, c.data.status)
+        buildtags!(rowtags, c, level+1)
     end
 end
+
+function buildimg(imgtags, colors, bkg, gccolor, colorgc::Bool = true)
+    w = size(imgtags,1)
+    h = size(imgtags,2)
+    img = fill(bkg, w, h)
+    colorlen = int(length(colors)/2)
+    for j = 1:h
+        coloroffset = colorlen*iseven(j)
+        colorindex = 0
+        lasttag = TAGNONE
+        for i = 1:w
+            t = imgtags[i,j]
+            if t != TAGNONE
+                asgc = t.status == 1 && colorgc
+                if t != lasttag && !asgc
+                    colorindex = mod1(colorindex+1, colorlen)
+                    lasttag = t
+                end
+                img[i,j] = asgc ? gccolor : colors[coloroffset+colorindex]
+            else
+                lasttag = TAGNONE
+            end
+        end
+    end
+    img
+end
+
+# This differs from the liperm in Base.Profile in that it also implements the combine operation
+# function liperm(lilist::Vector{Profile.LineInfo}, combine::Bool = true)
+#     comb = Array(ASCIIString, length(lilist))
+#     for i = 1:length(lilist)
+#         li = lilist[i]
+#         if li != Profile.UNKNOWN
+#             comb[i] = @sprintf("%s:%s:%06d", li.file, li.func, li.line)
+#         else
+#             comb[i] = "zzz"
+#         end
+#     end
+#     p = sortperm(comb)
+#     if combine
+#         for i = 1:length(p)-1
+#             if comb[p[i]] == comb[p[i+1]]
+#                 p[i+1] = p[i]
+#             end
+#         end
+#     end
+#     p
+# end
 
 end

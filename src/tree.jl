@@ -1,0 +1,103 @@
+module Tree
+
+import Base: start, done, next, show
+
+export Node,
+    addchild,
+    addsibling,
+    isroot,
+    isleaf,
+    lastsibling
+
+# Tree representation:
+# Suppose a particular node, "A", has 3 children, "a", "b", and "c".
+#     "a", "b", and "c" link to "A" as their parent.
+#     "A" links "a" as its child; "a" links "b" as its sibling, and "b" links "c" as its sibling.
+#     Any missing links (e.g., "c" does not have a sibling) link back to itself (c.sibling == c)
+# With this organization, no arrays need to be allocated.
+
+type Node{T}
+    data::T
+    parent::Node
+    child::Node
+    sibling::Node
+    
+    # Constructor for the root of the tree
+    function Node(data::T)
+        n = new(data)
+        n.parent = n
+        n.child = n
+        n.sibling = n
+        n
+    end
+    # Constructor for all others
+    function Node(data::T, parent::Node)
+        n = new(data, parent)
+        n.child = n
+        n.sibling = n
+        n
+    end
+end
+Node{T}(data::T) = Node{T}(data)
+Node{T}(data::T, parent::Node{T}) = Node{T}(data, parent)
+
+function lastsibling(sib::Node)
+    newsib = sib.sibling
+    while sib != newsib
+        sib = newsib
+        newsib = sib.sibling
+    end
+    sib
+end
+
+function addsibling{T}(oldersib::Node{T}, data::T)
+    if oldersib.sibling != oldersib
+        error("Truncation of sibling list")
+    end
+    youngersib = Node(data, oldersib.parent)
+    oldersib.sibling = youngersib
+    youngersib
+end
+
+function addchild{T}(parent::Node{T}, data::T)
+    newc = Node(data, parent)
+    prevc = parent.child
+    if prevc == parent
+        parent.child = newc
+    else
+        prevc = lastsibling(prevc)
+        prevc.sibling = newc
+    end
+    newc
+end
+
+isroot(n::Node) = n == n.parent
+isleaf(n::Node) = n == n.child
+
+show(io::IO, n::Node) = print(io, n.data)
+
+# Iteration over children
+# for c in parent
+#     # do something
+# end
+start(n::Node) = n.child
+done(n::Node, state::Node) = n == state
+next(n::Node, state::Node) = state, state == state.sibling ? n : state.sibling
+
+function showedges(io::IO, parent::Node, printfunc = identity)
+    if isleaf(parent)
+        println(io, printfunc(parent.data), " has no children")
+    else
+        print(io, printfunc(parent.data), " has the following children: ")
+        for c in parent
+            print(io, printfunc(c.data), "    ")
+        end
+        print(io, "\n")
+        for c in parent
+            showedges(io, c, printfunc)
+        end
+    end
+end
+showedges(parent::Node) = showedges(STDOUT, parent)
+
+end
