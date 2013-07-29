@@ -17,11 +17,12 @@ PVData(ip::Uint, hspan::Range1{Int}) = PVData(ip, hspan, 0)
 #    isjl[ip]: true/false depending on whether it's a Julia function rather than C/Fortran
 #    isgc[ip]: true if a garbage-collection event. Also have flaggc=true/false; if flaggc==true, display parent Julia call in red
 #    ip2so[ip]: an integer giving the "sortorder", the rank in a sorted list of strings associated with unique ip's. Note this mapping can implement "combine".
-#    so2ip[so]: convert the sortorder back into an instruction pointer. It's possible that so2ip[ip2so[ip]] != ip, but they do resolve to the same lineinfo
-#    lineinfo[ip]: the line information (func, file, line #)
+#    so2ip[so]: convert the sortorder back into an instruction pointer.
+#    lidict[ip]: the line information (func, file, line #)
 
 # Build the whole graph. Later we'll prune it depending on C=true/false
 # ("peeking ahead" for gc events will be easier if we have the whole thing)
+# lidict is just for debugging
 function buildgraph!(parent::Node, bt::Vector{Vector{Uint}}, counts::Vector{Int}, level::Int, ip2so::Dict, so2ip::Dict, lidict)
     # Organize backtraces into groups that are identical up to this level
     dorder = (Int=>Vector{Int})[]
@@ -51,6 +52,13 @@ function buildgraph!(parent::Node, bt::Vector{Vector{Uint}}, counts::Vector{Int}
     order = order[p]
     group = group[p]
     n = n[p]
+#     if length(order) > 1
+#         print(get(lidict, parent.data.ip, "root"), " has children:")
+#         for i = 1:length(order)
+#             print("  ", lidict[so2ip[order[i]]])
+#         end
+#         println("\n")
+#     end
     # Generate the children
     hstart = first(parent.data.hspan)
     c = addchild(parent, PVData(so2ip[order[1]], hstart:(hstart+n[1]-1)))

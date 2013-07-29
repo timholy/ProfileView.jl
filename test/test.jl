@@ -18,5 +18,7 @@ function profile_simple_test(n)
     end
 end
 
+profile_test(1)
 Profile.clear()
 @profile profile_test(10)
+ProfileView.view()

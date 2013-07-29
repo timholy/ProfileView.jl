@@ -6,16 +6,12 @@ include("pvtree.jl")
 using .Tree
 using .PVTree
 
-# TODO:
-# Implement combine
-# Profile its performance, it may be slow
-
 using Tk, Color, Base.Graphics
 import Cairo
 
-import Base: first, show
+import Base: isequal, show
 
-export profview
+# TODO: implement zoom
 
 immutable TagData
     ip::Uint
@@ -24,7 +20,12 @@ end
 TagData(ip::Integer, status::Integer) = TagData(uint(ip), int(status))
 const TAGNONE = TagData(0, -1)
 
-function profview(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, combine = true)
+const bkg = color("black")
+const fontcolor = color("white")
+const gccolor = color("red")
+const colors = distinguishable_colors(13, [bkg,fontcolor,gccolor])[4:end]
+
+function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, combine = true)
     bt, counts = Profile.tree_aggregate(data)
     if isempty(counts)
         Profile.warning_empty()
@@ -46,9 +47,10 @@ function profview(data = Profile.fetch(); C = false, colorgc = true, fontsize = 
     isjl[uint(0)] = false  # needed for root below
     isgc[uint(0)] = false
     p = Profile.liperm(lkupC)
-    pp = sortperm(p)
-    ip2so = Dict(uip, pp)
-    so2ip = Dict(pp, uip)
+    rank = similar(p)
+    rank[p] = 1:length(p)
+    ip2so = Dict(uip, rank)
+    so2ip = Dict(rank, uip)
     # Build the graph
     level = 0
     w = sum(counts)
@@ -56,21 +58,16 @@ function profview(data = Profile.fetch(); C = false, colorgc = true, fontsize = 
     PVTree.buildgraph!(root, bt, counts, 0, ip2so, so2ip, lidict)
 #     Tree.showedges(STDOUT, root, x -> string(get(lidict, x.ip, "root"), ", hspan = ", x.hspan, ", status = ", x.status))
     PVTree.prunegraph!(root, C, isjl, isgc)
-    println("\nPruned:")
+#     println("\nPruned:")
 #     Tree.showedges(STDOUT, root, x -> string(get(lidict, x.ip, "root"), " status = ", x.status))
     # Generate a "tagged" image
     rowtags = {fill(TAGNONE, w)}
-    buildtags!(rowtags, root, 1) # , colors[4:end], bkg)
+    buildtags!(rowtags, root, 1)
     imgtags = hcat(rowtags...)
-    @show size(imgtags)
-    bkg = color("black")
-    fontcolor = color("white")
-    gccolor = color("red")
-    colors = distinguishable_colors(13, [bkg,fontcolor,gccolor])
-    img = buildimg(imgtags, colors[4:end], bkg, gccolor, colorgc)
-    img32 = [convert(Uint32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
-    imw = size(img32,2)
-    imh = size(img32,1)
+    img = buildimg(imgtags, colors, bkg, gccolor, colorgc, combine, lidict)
+    img24 = [convert(Uint32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
+    imw = size(img24,2)
+    imh = size(img24,1)
     # Display in a window
     win = Toplevel("Profile", 300, 300)
     f = Frame(win)
@@ -83,7 +80,7 @@ function profview(data = Profile.fetch(); C = false, colorgc = true, fontsize = 
         h = height(c)
         set_coords(ctx, 0, 0, w, h, 0, imw, 0, imh)
         # We largely reimplement Cairo.image() here because we always want to use FILTER_NEAREST
-        surf = Cairo.CairoRGBSurface(img32)
+        surf = Cairo.CairoRGBSurface(img24)
         rectangle(ctx, 0, 0, imw, imh)
         save(ctx)
         scale(ctx, imw/surf.width, imh/surf.height)
@@ -137,6 +134,7 @@ function profview(data = Profile.fetch(); C = false, colorgc = true, fontsize = 
     end
     set_size(win, 300, 300)
     c.resize(c)
+    nothing
 end
 
 function buildtags!(rowtags, parent, level)
@@ -154,52 +152,57 @@ function buildtags!(rowtags, parent, level)
     end
 end
 
-function buildimg(imgtags, colors, bkg, gccolor, colorgc::Bool = true)
+function buildimg(imgtags, colors, bkg, gccolor, colorgc::Bool, combine::Bool, lidict)
     w = size(imgtags,1)
     h = size(imgtags,2)
     img = fill(bkg, w, h)
     colorlen = int(length(colors)/2)
     for j = 1:h
         coloroffset = colorlen*iseven(j)
-        colorindex = 0
+        colorindex = 1
         lasttag = TAGNONE
+        status = 0
+        first = 0
+        nextcolor = colors[coloroffset + colorindex]
         for i = 1:w
             t = imgtags[i,j]
             if t != TAGNONE
-                asgc = t.status == 1 && colorgc
-                if t != lasttag && !asgc
-                    colorindex = mod1(colorindex+1, colorlen)
+                status |= t.status
+                if t != lasttag && (lasttag == TAGNONE || !(combine && lidict[lasttag.ip] == lidict[t.ip]))
+                    if first != 0
+                        colorindex = fillrow!(img, j, first:i-1, colorindex, colorlen, nextcolor, gccolor, status & colorgc)
+                        nextcolor = colors[coloroffset + colorindex]
+                        status = t.status
+                    end
+                    first = i
                     lasttag = t
                 end
-                img[i,j] = asgc ? gccolor : colors[coloroffset+colorindex]
             else
-                lasttag = TAGNONE
+                if first != 0
+                    # We transitioned from tag->none, render the previous range
+                    colorindex = fillrow!(img, j, first:i-1, colorindex, colorlen, nextcolor, gccolor, status & colorgc)
+                    nextcolor = colors[coloroffset + colorindex]
+                    first = 0
+                    lasttag = TAGNONE
+                end
             end
+        end
+        if first != 0
+            # We got to the end of a row, render the previous range
+            fillrow!(img, j, first:w, colorindex, colorlen, nextcolor, gccolor, status & colorgc)
         end
     end
     img
 end
 
-# This differs from the liperm in Base.Profile in that it also implements the combine operation
-# function liperm(lilist::Vector{Profile.LineInfo}, combine::Bool = true)
-#     comb = Array(ASCIIString, length(lilist))
-#     for i = 1:length(lilist)
-#         li = lilist[i]
-#         if li != Profile.UNKNOWN
-#             comb[i] = @sprintf("%s:%s:%06d", li.file, li.func, li.line)
-#         else
-#             comb[i] = "zzz"
-#         end
-#     end
-#     p = sortperm(comb)
-#     if combine
-#         for i = 1:length(p)-1
-#             if comb[p[i]] == comb[p[i+1]]
-#                 p[i+1] = p[i]
-#             end
-#         end
-#     end
-#     p
-# end
+function fillrow!(img, j, rng::Range1{Int}, colorindex, colorlen, regcolor, gccolor, status)
+    if status > 0
+        img[rng,j] = gccolor
+        return colorindex
+    else
+        img[rng,j] = regcolor
+        return mod1(colorindex+1, colorlen)
+    end
+end
 
 end
