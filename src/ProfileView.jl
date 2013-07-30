@@ -1,17 +1,16 @@
 module ProfileView
 
-include("tree.jl")
-include("pvtree.jl")
-
-using .Tree
-using .PVTree
-
 using Tk, Color, Base.Graphics
 import Cairo
 
 import Base: contains, isequal, show
 
-# TODO: implement zoom
+include("tree.jl")
+include("pvtree.jl")
+include(joinpath(Pkg.dir(), "ImageView", "src", "rubberband.jl")) # for zoom
+
+using .Tree
+using .PVTree
 
 immutable TagData
     ip::Uint
@@ -24,6 +23,11 @@ const bkg = color("black")
 const fontcolor = color("white")
 const gccolor = color("red")
 const colors = distinguishable_colors(13, [bkg,fontcolor,gccolor])[4:end]
+
+type ZoomCanvas
+    bb::BoundingBox
+    c::Canvas
+end
 
 function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, combine = true)
     bt, counts = Profile.tree_aggregate(data)
@@ -84,6 +88,7 @@ function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, 
     imgtags = hcat(rowtags...)
     img = buildimg(imgtags, colors, bkg, gccolor, colorgc, combine, lidict)
     img24 = [convert(Uint32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
+    surf = Cairo.CairoRGBSurface(img24)
     imw = size(img24,2)
     imh = size(img24,1)
     # Display in a window
@@ -91,22 +96,34 @@ function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, 
     f = Frame(win)
     pack(f, expand = true, fill = "both")
     c = Canvas(f)
-    pack(c, expand = true, fill = "both")    
+    pack(c, expand = true, fill = "both")
+    czoom = ZoomCanvas(BoundingBox(0, imw, 0, imh), c)
+    c.mouse.button1press = (c, x, y) -> rubberband_start(c, x, y, (c, bb) -> zoom_bb(czoom, bb))
+    bind(c, "<Double-Button-1>", (path,x,y)->zoom_reset(czoom))
+    function zoom_bb(czoom::ZoomCanvas, bb::BoundingBox)
+        czoom.bb = bb
+        redraw(czoom.c)
+        reveal(czoom.c)
+        Tk.update()
+    end
+    function zoom_reset(czoom::ZoomCanvas)
+        czoom.bb = BoundingBox(0, imw, 0, imh)
+        redraw(czoom.c)
+        reveal(czoom.c)
+        Tk.update()
+    end
     function redraw(c)
         ctx = getgc(c)
         w = width(c)
         h = height(c)
-        set_coords(ctx, 0, 0, w, h, 0, imw, 0, imh)
-        # We largely reimplement Cairo.image() here because we always want to use FILTER_NEAREST
-        surf = Cairo.CairoRGBSurface(img24)
-        rectangle(ctx, 0, 0, imw, imh)
-        save(ctx)
-        scale(ctx, imw/surf.width, imh/surf.height)
+        cbb = czoom.bb
+        winbb = BoundingBox(0, w, 0, h)
+        set_coords(ctx, winbb, cbb)
+        rectangle(ctx, cbb)
         set_source(ctx, surf)
         p = Cairo.get_source(ctx)
         Cairo.pattern_set_filter(p, Cairo.CAIRO_FILTER_NEAREST)
-        fill_preserve(ctx)
-        restore(ctx)
+        fill(ctx)
     end
     # From a given position, find the underlying tag
     function gettag(xu, yu)
