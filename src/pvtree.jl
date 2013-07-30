@@ -80,43 +80,57 @@ function buildgraph!(parent::Node, bt::Vector{Vector{Uint}}, counts::Vector{Int}
     end
 end
 
-# Updates the status and, if C == false, prunes any "C" children
-function prunegraph!(parent::Node, C::Bool, isjl::Dict, isgc::Dict)
-    pisjl = isjl[parent.data.ip]
-    firstchild = true
-    prevchild = parent.child
+function setstatus!(parent::Node, isgc::Dict)
+    if isgc[parent.data.ip]
+        parent.data.status = 1
+    end
     for c in parent
-        if isgc[c.data.ip] && (pisjl || !C)
-            parent.data.status = 1  # marks parent as triggering garbage collection
-        end
-        if !C
-            newc = prunegraph!(c, C, isjl, isgc)
-            if newc != parent
-                # newc is a valid child
-                if firstchild
-                    parent.child = newc
-                    firstchild = false
-                else
-                    prevchild.sibling = newc
-                end
-                # one child might have become several children
-                prevchild = (newc == c) ? newc : lastsibling(newc)
-            elseif firstchild
-                # mark it tentatively as a leaf so it can be clipped
-                parent.child = parent
-            end
-        end
+        setstatus!(c, isgc)
     end
-    if !C && !pisjl
-        if isleaf(parent)
-            # Prune entirely
-            parent.parent.data.status |= parent.data.status
-            return parent.parent
-        else
-            return parent.child
-        end
-    end
-    parent
 end
+
+# The last three inputs are just for debugging
+function prunegraph!(parent::Node, isjl::Dict, lidict, ip2so, counts)
+    if parent.data.ip != 0
+        counts[ip2so[parent.data.ip]] += 1
+    end
+    c = parent.child
+    if parent == c
+        return
+    end
+    parent.child = parent  # mark as a leaf unless we keep some children
+    lastc = c
+    isfirst = true
+    while true
+        prunegraph!(c, isjl, lidict, ip2so, counts)
+        if !isjl[c.data.ip]
+            parent.data.status |= c.data.status
+            if !isleaf(c)
+                # It has Julia children, splice them in
+                if isfirst
+                    parent.child = c.child
+                    isfirst = false
+                else
+                    lastc.sibling = c.child
+                end
+                lastc = lastsibling(c.child)
+            end
+        else
+            if isfirst
+                parent.child = c
+            else
+                lastc.sibling = c
+            end
+            isfirst = false
+            lastc = c
+        end
+        if c.sibling == c
+            lastc.sibling = lastc.sibling
+            break
+        end
+        c = c.sibling
+    end
+end
+
 
 end

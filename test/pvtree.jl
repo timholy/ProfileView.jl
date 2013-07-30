@@ -31,7 +31,8 @@ end
 
 # Run it with C == false
 root = buildraw()
-PVTree.prunegraph!(root, false, isjl, isgc)
+PVTree.setstatus!(root, isgc)
+PVTree.prunegraph!(root, isjl)
 
 @assert root.data.status == 1
 c = root.child
@@ -50,13 +51,14 @@ c = c.sibling
 
 # Now do it again, with C == true
 root = buildraw()
-PVTree.prunegraph!(root, true, isjl, isgc)
+PVTree.setstatus!(root, isgc)
+# PVTree.prunegraph!(root, isjl)
 
 @assert root.data.status == 0
 c = root.child
 c1 = c
 @assert c.data.ip == 1
-@assert c.data.status == 1
+@assert c.data.status == 0
 c = c.sibling
 @assert c.data.ip == 2
 @assert c.data.status == 0
@@ -77,5 +79,6 @@ c = c.sibling
 @assert c == c.sibling
 c = c1.child
 @assert c.data.ip == 7
+@assert c.data.status == 1
 @assert Tree.isleaf(c)
 @assert c == c.sibling

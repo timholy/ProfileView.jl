@@ -9,7 +9,7 @@ using .PVTree
 using Tk, Color, Base.Graphics
 import Cairo
 
-import Base: isequal, show
+import Base: contains, isequal, show
 
 # TODO: implement zoom
 
@@ -56,10 +56,28 @@ function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, 
     w = sum(counts)
     root = Tree.Node(PVData(1:w))
     PVTree.buildgraph!(root, bt, counts, 0, ip2so, so2ip, lidict)
+    PVTree.setstatus!(root, isgc)
 #     Tree.showedges(STDOUT, root, x -> string(get(lidict, x.ip, "root"), ", hspan = ", x.hspan, ", status = ", x.status))
-    PVTree.prunegraph!(root, C, isjl, isgc)
+#     Tree.showedges(STDOUT, root, x -> string(get(lidict, x.ip, "root"), ", status = ", x.status))
+#     Tree.showedges(STDOUT, root, x -> x.status == 0 ? nothing : string(get(lidict, x.ip, "root"), ", status = ", x.status))
+#     checkidentity(ip2so, so2ip)
+#     checkcontains(root, ip2so, so2ip, lidict)
+#     checkstatus(root, isgc, isjl, C, lidict)
+    counts = zeros(Int, length(uip))
+    if !C
+        PVTree.prunegraph!(root, isjl, lidict, ip2so, counts)
+    end
+#     for ip in uip
+#         println(counts[ip2so[ip]], ": ", lidict[ip])
+#     end
+#     if !C
+#         havegc = any([isgc[ip] for ip in uip])
+#         if havegc
+#             @assert checkprunedgc(root, false)
+#         end
+#     end
 #     println("\nPruned:")
-#     Tree.showedges(STDOUT, root, x -> string(get(lidict, x.ip, "root"), " status = ", x.status))
+#     Tree.showedges(STDOUT, root, x -> string(get(lidict, x.ip, "root"), ", status = ", x.status))
     # Generate a "tagged" image
     rowtags = {fill(TAGNONE, w)}
     buildtags!(rowtags, root, 1)
@@ -167,7 +185,6 @@ function buildimg(imgtags, colors, bkg, gccolor, colorgc::Bool, combine::Bool, l
         for i = 1:w
             t = imgtags[i,j]
             if t != TAGNONE
-                status |= t.status
                 if t != lasttag && (lasttag == TAGNONE || !(combine && lidict[lasttag.ip] == lidict[t.ip]))
                     if first != 0
                         colorindex = fillrow!(img, j, first:i-1, colorindex, colorlen, nextcolor, gccolor, status & colorgc)
@@ -176,6 +193,8 @@ function buildimg(imgtags, colors, bkg, gccolor, colorgc::Bool, combine::Bool, l
                     end
                     first = i
                     lasttag = t
+                else
+                    status |= t.status
                 end
             else
                 if first != 0
@@ -203,6 +222,74 @@ function fillrow!(img, j, rng::Range1{Int}, colorindex, colorlen, regcolor, gcco
         img[rng,j] = regcolor
         return mod1(colorindex+1, colorlen)
     end
+end
+
+#### Debugging code
+
+function checkidentity(ip2so, so2ip)
+    for (k,v) in ip2so
+        @assert so2ip[v] == k
+    end
+end
+
+function checkcontains(root, ip2so, so2ip, lidict)
+    flag = contains(root, ip2so)
+    if !all(flag)
+        missing = find(!flag)
+        println("missing ips:")
+        for i in missing
+            @show i
+            @show so2ip[i]
+            println(lidict[so2ip[i]])
+        end
+        error("Internal error: the tree does not contain all ips")
+    end
+end
+
+# This skips the parent, gets everything else
+# (to avoid a problem with root with ip=0)
+function contains(parent::Node, ip2so::Dict)
+    ret = Array(Bool, 0)
+    contains!(ret, parent, ip2so)
+    @show length(ip2so)
+    @show length(ret)
+    return ret
+end
+
+function contains!(ret, parent::Node, ip2so::Dict)
+    for c in parent
+        indx = ip2so[c.data.ip]
+        setindexsafe!(ret, indx, true)
+        contains!(ret, c, ip2so)
+    end
+end
+
+function setindexsafe!(a, i::Integer, val)
+    if i > length(a)
+        insert!(a, i, val)
+    else
+        a[i] = val
+    end
+end
+
+function checkstatus(parent::Node, isgc::Dict, isjl::Dict, C, lidict)
+    if isgc[parent.data.ip] && parent.data.status == 0
+            @show lidict[parent.data.ip]
+            error("gc should be set, and it isn't")
+    end
+    for c in parent
+        checkstatus(c, isgc, isjl, C, lidict)
+    end
+end
+
+function checkprunedgc(parent::Node, tf::Bool)
+    tf |= parent.data.status > 0
+    if !tf
+        for c in parent
+            tf = checkprunedgc(c, tf)
+        end
+    end
+    tf
 end
 
 end

@@ -9,7 +9,7 @@ export Node,
     isleaf,
     lastsibling
 
-# Tree representation:
+# "Left-child, right-sibling" tree representation:
 # Suppose a particular node, "A", has 3 children, "a", "b", and "c".
 #     "a", "b", and "c" link to "A" as their parent.
 #     "A" links "a" as its child; "a" links "b" as its sibling, and "b" links "c" as its sibling.
@@ -85,16 +85,19 @@ done(n::Node, state::Node) = n == state
 next(n::Node, state::Node) = state, state == state.sibling ? n : state.sibling
 
 function showedges(io::IO, parent::Node, printfunc = identity)
-    if isleaf(parent)
-        println(io, printfunc(parent.data), " has no children")
-    else
-        print(io, printfunc(parent.data), " has the following children: ")
-        for c in parent
-            print(io, printfunc(c.data), "    ")
-        end
-        print(io, "\n")
-        for c in parent
-            showedges(io, c, printfunc)
+    str = printfunc(parent.data)
+    if str != nothing
+        if isleaf(parent)
+            println(io, str, " has no children")
+        else
+            print(io, str, " has the following children: ")
+            for c in parent
+                print(io, printfunc(c.data), "    ")
+            end
+            print(io, "\n")
+            for c in parent
+                showedges(io, c, printfunc)
+            end
         end
     end
 end
