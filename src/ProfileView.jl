@@ -100,6 +100,7 @@ function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, 
     czoom = ZoomCanvas(BoundingBox(0, imw, 0, imh), c)
     c.mouse.button1press = (c, x, y) -> rubberband_start(c, x, y, (c, bb) -> zoom_bb(czoom, bb))
     bind(c, "<Double-Button-1>", (path,x,y)->zoom_reset(czoom))
+    lasttextbb = BoundingBox(1,0,1,0)
     function zoom_bb(czoom::ZoomCanvas, bb::BoundingBox)
         czoom.bb = bb
         redraw(czoom.c)
@@ -142,9 +143,19 @@ function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, 
     # Hover over a block and see the source line
     c.mouse.motion = function (c, xd, yd)
         # Repair image from ovewritten text
-        redraw(c)
-        # Write the info
         ctx = getgc(c)
+        if width(lasttextbb) > 0
+            w = width(c)
+            h = height(c)
+            winbb = BoundingBox(0, w, 0, h)
+            set_coords(ctx, winbb, czoom.bb)
+            rectangle(ctx, lasttextbb)
+            set_source(ctx, surf)
+            p = Cairo.get_source(ctx)
+            Cairo.pattern_set_filter(p, Cairo.CAIRO_FILTER_NEAREST)
+            fill(ctx)
+        end
+        # Write the info
         xu, yu = device_to_user(ctx, xd, yd)
         tag = gettag(xu, yu)
         if tag != TAGNONE
@@ -152,7 +163,7 @@ function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, 
             str = string(basename(li.file), ", ", li.func, ": line ", li.line)
             set_source(ctx, fontcolor)
             Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
-            Cairo.text(ctx, xu, yu, str, fontsize, xu < imw/3 ? "left" : xu < 2imw/3 ? "center" : "right", "bottom", 0, latex=false)
+            lasttextbb = Cairo.text(ctx, xu, yu, str, fontsize, xu < imw/3 ? "left" : xu < 2imw/3 ? "center" : "right", "bottom", 0, latex=false)
         end
         reveal(c)
         Tk.update()
