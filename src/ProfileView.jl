@@ -123,7 +123,7 @@ function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, 
         rectangle(ctx, cbb)
         set_source(ctx, surf)
         p = Cairo.get_source(ctx)
-        Cairo.pattern_set_filter(p, Cairo.CAIRO_FILTER_NEAREST)
+        Cairo.pattern_set_filter(p, Cairo.FILTER_NEAREST)
         fill(ctx)
     end
     # From a given position, find the underlying tag
@@ -152,7 +152,7 @@ function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, 
             rectangle(ctx, lasttextbb)
             set_source(ctx, surf)
             p = Cairo.get_source(ctx)
-            Cairo.pattern_set_filter(p, Cairo.CAIRO_FILTER_NEAREST)
+            Cairo.pattern_set_filter(p, Cairo.FILTER_NEAREST)
             fill(ctx)
         end
         # Write the info
@@ -163,7 +163,7 @@ function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, 
             str = string(basename(li.file), ", ", li.func, ": line ", li.line)
             set_source(ctx, fontcolor)
             Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
-            lasttextbb = Cairo.text(ctx, xu, yu, str, fontsize, xu < imw/3 ? "left" : xu < 2imw/3 ? "center" : "right", "bottom", 0, latex=false)
+            lasttextbb = Cairo.text(ctx, xu, yu, str, halign = xu < imw/3 ? "left" : xu < 2imw/3 ? "center" : "right")
         end
         reveal(c)
         Tk.update()
