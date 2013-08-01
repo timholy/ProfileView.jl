@@ -7,6 +7,9 @@ can be helpful for geting a big-picture overview of the major
 bottlenecks in your code, and optionally highlights lines that trigger
 garbage collection as potential candidates for optimization.
 
+This type of plot is known as a [flame
+graph](https://github.com/brendangregg/FlameGraph).
+
 ## Installation
 
 Within Julia, use the package manager:
