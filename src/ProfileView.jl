@@ -25,7 +25,7 @@ const gccolor = color("red")
 const colors = distinguishable_colors(13, [bkg,fontcolor,gccolor])[4:end]
 
 type ZoomCanvas
-    bb::BoundingBox
+    bb::BoundingBox  # in user-coordinates
     c::Canvas
 end
 
@@ -101,14 +101,15 @@ function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, 
     c.mouse.button1press = (c, x, y) -> rubberband_start(c, x, y, (c, bb) -> zoom_bb(czoom, bb))
     bind(c, "<Double-Button-1>", (path,x,y)->zoom_reset(czoom))
     lasttextbb = BoundingBox(1,0,1,0)
+    imgbb = BoundingBox(0, imw, 0, imh)
     function zoom_bb(czoom::ZoomCanvas, bb::BoundingBox)
-        czoom.bb = bb
+        czoom.bb = bb & imgbb
         redraw(czoom.c)
         reveal(czoom.c)
         Tk.update()
     end
     function zoom_reset(czoom::ZoomCanvas)
-        czoom.bb = BoundingBox(0, imw, 0, imh)
+        czoom.bb = imgbb
         redraw(czoom.c)
         reveal(czoom.c)
         Tk.update()
@@ -144,8 +145,8 @@ function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, 
     c.mouse.motion = function (c, xd, yd)
         # Repair image from ovewritten text
         ctx = getgc(c)
+        w = width(c)
         if width(lasttextbb) > 0
-            w = width(c)
             h = height(c)
             winbb = BoundingBox(0, w, 0, h)
             set_coords(ctx, winbb, czoom.bb)
