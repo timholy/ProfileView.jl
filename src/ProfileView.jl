@@ -163,7 +163,7 @@ function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, 
             str = string(basename(li.file), ", ", li.func, ": line ", li.line)
             set_source(ctx, fontcolor)
             Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
-            lasttextbb = Cairo.text(ctx, xu, yu, str, halign = xu < imw/3 ? "left" : xu < 2imw/3 ? "center" : "right")
+            lasttextbb = Cairo.text(ctx, xu, yu, str, halign = xd < w/3 ? "left" : xd < 2w/3 ? "center" : "right")
         end
         reveal(c)
         Tk.update()
