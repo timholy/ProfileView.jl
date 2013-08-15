@@ -84,7 +84,7 @@ things about this function:
 
 - You may notice some very narrow bars along the bottom at the left
   edge of this plot. If you hover over them, you'll see that these
-  correspond to operations that are performed by your code, but who's
+  correspond to operations that are performed by your code, but whose
   "parents" are not known.  These are the highly-offensive (well, to
   the author) [truncated
   backtraces](https://github.com/JuliaLang/julia/issues/3469). Whistle
