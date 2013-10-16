@@ -91,7 +91,7 @@ end
 
 # The last three inputs are just for debugging
 function prunegraph!(parent::Node, isjl::Dict, lidict, ip2so, counts)
-    if parent.data.ip != 0
+    if parent.data.ip != 0 && !isempty(counts)
         counts[ip2so[parent.data.ip]] += 1
     end
     c = parent.child
