@@ -1,7 +1,7 @@
 function profile_test(n)
     for i = 1:n
         A = randn(100,100,20)
-        m = max(A)
+        m = maximum(A)
         Afft = fft(A)
         Am = mapslices(sum, A, 2)
         B = A[:,:,5]
