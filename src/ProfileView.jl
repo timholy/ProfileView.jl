@@ -16,8 +16,7 @@ immutable TagData
     ip::Uint
     status::Int
 end
-TagData(ip::Integer, status::Integer) = TagData(uint(ip), int(status))
-const TAGNONE = TagData(0, -1)
+const TAGNONE = TagData(uint(0), -1)
 
 const bkg = color("black")
 const fontcolor = color("white")
