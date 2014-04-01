@@ -26,7 +26,7 @@ data. Here's a simple test function for demonstration:
 function profile_test(n)
     for i = 1:n
         A = randn(100,100,20)
-        m = max(A)
+        m = maximum(A)
         Afft = fft(A)
         Am = mapslices(sum, A, 2)
         B = A[:,:,5]
@@ -39,7 +39,6 @@ end
 profile_test(1)  # run once to trigger compilation
 Profile.clear()  # in case we have any previous profiling data
 @profile profile_test(10)
-ProfileView.view()
 ```
 Now that we have profiling data, visualizing it is a simple matter:
 ```
