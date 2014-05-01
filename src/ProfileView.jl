@@ -57,15 +57,13 @@ function prepare(data; C = false, colorgc = true, combine = true)
     # Do code address lookups on all unique instruction pointers
     uip = unique(vcat(bt...))
     nuip = length(uip)
-    lkupdict = Dict(uip, 1:nuip)
-    lkupC = [Profile.lookup(ip, true) for ip in uip]
-    lkupJ = [Profile.lookup(ip, false) for ip in uip]
-    lidict = Dict(uip, lkupC)
-    isjl = Dict(uip, [lkupC[i].line == lkupJ[i].line for i = 1:nuip])
-    isgc = Dict(uip, [lkupC[i].func == "jl_gc_collect" for i = 1:nuip])
+    lkup = [Profile.lookup(ip) for ip in uip]
+    lidict = Dict(uip, lkup)
+    isjl = Dict(uip, [!lkup[i].fromC for i = 1:nuip])
+    isgc = Dict(uip, [lkup[i].func == "jl_gc_collect" for i = 1:nuip])
     isjl[uint(0)] = false  # needed for root below
     isgc[uint(0)] = false
-    p = Profile.liperm(lkupC)
+    p = Profile.liperm(lkup)
     rank = similar(p)
     rank[p] = 1:length(p)
     ip2so = Dict(uip, rank)
