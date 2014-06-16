@@ -41,7 +41,7 @@ const fontcolor = color("white")
 const gccolor = color("red")
 const colors = distinguishable_colors(13, [bkg,fontcolor,gccolor])[4:end]
 
-function prepare(data; C = false, colorgc = true, combine = true)
+function prepare(data; C = false, lidict = nothing, colorgc = true, combine = true)
     bt, counts = Profile.tree_aggregate(data)
     if isempty(counts)
         Profile.warning_empty()
@@ -57,8 +57,12 @@ function prepare(data; C = false, colorgc = true, combine = true)
     # Do code address lookups on all unique instruction pointers
     uip = unique(vcat(bt...))
     nuip = length(uip)
-    lkup = [Profile.lookup(ip) for ip in uip]
-    lidict = Dict(uip, lkup)
+    if lidict == nothing
+        lkup = [Profile.lookup(ip) for ip in uip]
+        lidict = Dict(uip, lkup)
+    else
+        lkup = [lidict[ip] for ip in uip]
+    end
     isjl = Dict(uip, [!lkup[i].fromC for i = 1:nuip])
     isgc = Dict(uip, [lkup[i].func == "jl_gc_collect" for i = 1:nuip])
     isjl[uint(0)] = false  # needed for root below
@@ -104,8 +108,8 @@ function prepare(data; C = false, colorgc = true, combine = true)
 end
 
 if useTk
-    function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, combine = true)
-        img, lidict, imgtags = prepare(data, C=C, colorgc=colorgc, combine=combine)
+    function view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true)
+        img, lidict, imgtags = prepare(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine)
         img24 = [convert(Uint32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
         surf = Cairo.CairoRGBSurface(img24)
         imw = size(img24,2)
@@ -203,8 +207,8 @@ if useTk
         nothing
     end
 else
-    function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, combine = true)
-        img, lidict, imgtags = prepare(data, C=C, colorgc=colorgc, combine=combine)
+    function view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true)
+        img, lidict, imgtags = prepare(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine)
         ProfileData(img, lidict, imgtags, fontsize)
     end
 end
