@@ -23,6 +23,8 @@ include("pvtree.jl")
 using .Tree
 using .PVTree
 
+include("compositor.jl")
+
 immutable TagData
     ip::Uint
     status::Int
