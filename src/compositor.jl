@@ -63,7 +63,7 @@ end
 
 function compose_view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true)
     lidict, root, depth = prepare_compose(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine)
-    img = SVGJS(10inch, depth*0.25inch)
+    img = SVGJS(10inch, (depth + 5)*0.25inch) # Add space for text
 
     draw(img, compose(context(), compose_tree(root.child, root, 1, 1.0/depth)))
 end
@@ -79,7 +79,7 @@ function compose_tree(node, parent, level, Δh)
     ccontexts = Array(Context, 0)
 
     if node.child == node
-        return compose(pcontext, rectangle(0, level*Δh, 1, Δh),
+        return compose(pcontext, rectangle(0, 1-level*Δh, 1, Δh),
         stroke("black"), fill("white"))
     end
 
@@ -87,7 +87,7 @@ function compose_tree(node, parent, level, Δh)
         push!(ccontexts, compose_tree(child, node, level+1, Δh))
     end
 
-    return compose(pcontext, rectangle(0, level*Δh, 1, Δh),
+    return compose(pcontext, rectangle(0, 1-level*Δh, 1, Δh),
     stroke("black"), fill("white"), ccontexts...)
 end
 
