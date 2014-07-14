@@ -61,9 +61,14 @@ function prepare_compose(data; C = false, lidict = nothing, colorgc = true, comb
     # img, lidict, imgtags, root
 end
 
-function compose_view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true)
+function compose_view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, backend = nothing)
     lidict, root, depth = prepare_compose(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine)
-    img = SVGJS(10inch, (depth + 5)*0.25inch) # Add space for text
+
+    if backend == nothing
+        img = SVGJS(10inch, (depth + 5)*0.25inch) # Add space for text
+    else
+        img = backend
+    end
 
     draw(img, compose(context(), compose_tree(root.child, root, 1, lidict, 1.0/depth)))
 end
@@ -78,10 +83,12 @@ function compose_tree(node, parent, level, lidict, Δh)
     ccontexts = Array(Context, 0)
     lineinfo = lidict[node.data.ip]
     
+    # Should probably be handled by javascript.  That way
+    # the text can automatically fill in as the user zooms in.
     str = @sprintf("%s in %s: %d", lineinfo.func, lineinfo.file, lineinfo.line)
     if length(nspan) < 3
         str = ""
-    elseif length(nspan) < 1.2length(str)
+    elseif length(nspan) < length(str)
         str =  str[1:int(length(nspan) - 3)] * "..."
     end
 
