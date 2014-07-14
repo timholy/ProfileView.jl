@@ -65,30 +65,40 @@ function compose_view(data = Profile.fetch(); C = false, lidict = nothing, color
     lidict, root, depth = prepare_compose(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine)
     img = SVGJS(10inch, (depth + 5)*0.25inch) # Add space for text
 
-    draw(img, compose(context(), compose_tree(root.child, root, 1, 1.0/depth)))
+    draw(img, compose(context(), compose_tree(root.child, root, 1, lidict, 1.0/depth)))
 end
 
-function compose_tree(node, parent, level, Δh)
+function compose_tree(node, parent, level, lidict, Δh)
     nspan = node.data.hspan
     pspan = parent.data.hspan
 
     x0 = (first(nspan) - first(pspan))/length(pspan)
     Δx = length(nspan)/length(pspan)
     pcontext = context(x0, 0, Δx, 1)
-
     ccontexts = Array(Context, 0)
+    lineinfo = lidict[node.data.ip]
+    
+    str = @sprintf("%s in %s: %d", lineinfo.func, lineinfo.file, lineinfo.line)
+    if length(nspan) < 3
+        str = ""
+    elseif length(nspan) < 1.2length(str)
+        str =  str[1:int(length(nspan) - 3)] * "..."
+    end
 
     if node.child == node
-        return compose(pcontext, rectangle(0, 1-level*Δh, 1, Δh),
-        stroke("black"), fill("white"))
-    end
-
+        return compose(pcontext,
+        (context(0, 0, 1, 1), text(1mm, 1-(level-0.5)*Δh, str, hleft, vcenter), fontsize(4)),
+        (context(0, 0, 1, 1), rectangle(0, 1-level*Δh, 1, Δh), fill("white"), stroke("black")))
+    end 
+    
     for child in node
-        push!(ccontexts, compose_tree(child, node, level+1, Δh))
+        push!(ccontexts, compose_tree(child, node, level+1, lidict, Δh))
     end
-
-    return compose(pcontext, rectangle(0, 1-level*Δh, 1, Δh),
-    stroke("black"), fill("white"), ccontexts...)
+    
+    return compose(pcontext,
+        (context(0, 0, 1, 1), text(1mm, 1-(level-0.5)*Δh, str, hleft, vcenter), fontsize(4)),
+        (context(0, 0, 1, 1), rectangle(0, 1-level*Δh, 1, Δh), fill("white"), stroke("black")),
+        ccontexts...)
 end
 
 function getTreeDepth(parent)
