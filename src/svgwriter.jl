@@ -1,4 +1,11 @@
+const snapsvgjs = Pkg.dir("ProfileView", "templates", "snap.svg-min.js")
+
+function escape_script(js::String)
+    return replace(js, "]]", "] ]")
+end
+
 function svgheader(f::IO; width=1200, height=706, font="Verdana")
+
     y_msg = height - 17
     print(f, """<?xml version="1.0" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
@@ -8,11 +15,14 @@ function svgheader(f::IO; width=1200, height=706, font="Verdana")
         <stop stop-color="#eeeeee" offset="5%" />
         <stop stop-color="#eeeeb0" offset="95%" />
     </linearGradient>
+    <rect id="clip-rect" x="0" y="0" width="250mm" height="80mm" />
 </defs>
 <style type="text/css">
     rect[rx]:hover { stroke:black; stroke-width:1; }
     text:hover { stroke:black; stroke-width:1; stroke-opacity:0.35; }
 </style>
+<script> <![CDATA[$(escape_script(readall(snapsvgjs)))
+]]> </script>
 <script type="text/ecmascript">
 <![CDATA[
     var details;
@@ -21,7 +31,9 @@ function svgheader(f::IO; width=1200, height=706, font="Verdana")
     function c() { details.nodeValue = ' '; }
 ]]>
 </script>
+<g id="frame" clip-path="url(#image-frame)">
 <rect x="0.0" y="0" width="$(width).0" height="$(height).0" fill="url(#background)"  />
+<g id="viewport" transform="scale(1)">
 <text text-anchor="middle" x="600" y="24" font-size="17" font-family="$(font)" fill="rgb(0,0,0)"  >Profile results</text>
 <text text-anchor="left" x="10" y="$y_msg" font-size="12" font-family="$(font)" fill="rgb(0,0,0)"  >Function:</text>
 <text text-anchor="" x="70" y="$y_msg" font-size="12" font-family="$(font)" fill="rgb(0,0,0)" id="details" > </text>
