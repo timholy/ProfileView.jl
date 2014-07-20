@@ -297,6 +297,8 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
     end
     print(f, """
         </g></g>
+script> <![CDATA[$(escape_script(readall(snapsvgjs)))
+]]> </script>
         <script><![CDATA[$(escape_script(readall(viewerjs)))
         ]]> </script>
     </svg>

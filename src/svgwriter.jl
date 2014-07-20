@@ -24,8 +24,6 @@ function svgheader(f::IO; width=1200, height=706, font="Verdana")
     rect[rx]:hover { stroke:black; stroke-width:1; }
     text:hover { stroke:black; stroke-width:1; stroke-opacity:0.35; }
 </style>
-<script> <![CDATA[$(escape_script(readall(snapsvgjs)))
-]]> </script>
 <script type="text/ecmascript">
 <![CDATA[
     var details;

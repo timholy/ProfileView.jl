@@ -21,5 +21,3 @@ Snap.selectAll('#viewport rect').forEach(function(rect){
         move_and_zoom(bbox.cx, clip_width/bbox.w)
     })
 }) 
-
-
