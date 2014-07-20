@@ -252,9 +252,9 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
         red = iround(255*rgb.r)
         green = iround(255*rgb.g)
         blue = iround(255*rgb.b)
-        print(f, """<rect vector-effect="non-scaling-stroke" x="$xstart" y="$y" width="$width" height="$ystep" fill="rgb($red,$green,$blue)" rx="2" ry="2" data-info="$info"/>\n""")
+        print(f, """<rect vector-effect="non-scaling-stroke" x="$xstart" y="$y" width="$width" height="$ystep" fill="rgb($red,$green,$blue)" rx="2" ry="2" data-shortinfo="$shortinfo" data-info="$info"/>\n""")
         #if shortinfo != ""
-        println(f, """\n<text text-anchor="" x="$(xstart+4)" y="$(y+11.5)" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" data-shortinfo="$shortinfo" onmouseover="s('$info')" onmouseout="c()"></text>""")
+        println(f, """\n<text text-anchor="" x="$(xstart+4)" y="$(y+11.5)" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" ></text>""")
         # end
     end
 

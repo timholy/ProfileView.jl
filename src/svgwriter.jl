@@ -17,21 +17,13 @@ function svgheader(f::IO; width=1200, height=706, font="Verdana")
         <stop stop-color="#eeeeb0" offset="95%" />
     </linearGradient>
     <clipPath id="image-frame">
-      <rect id="clip-rect" x="0" y="0" width=$(width) height=$(height) />
+      <rect id="clip-rect" x="0" y="0" width="$(width)" height="$(height)" />
     </clipPath>
 </defs>
 <style type="text/css">
     rect[rx]:hover { stroke:black; stroke-width:1; }
     text:hover { stroke:black; stroke-width:1; stroke-opacity:0.35; }
 </style>
-<script type="text/ecmascript">
-<![CDATA[
-    var details;
-    function init(evt) { details = document.getElementById("details").firstChild; }
-    function s(info) { details.nodeValue = info; }
-    function c() { details.nodeValue = ' '; }
-]]>
-</script>
 <g id="frame" clip-path="url(#image-frame)">
 <rect class="background" x="0.0" y="0" width="$(width).0" height="$(height).0" fill="url(#background)"  />
 <text class="background" text-anchor="middle" x="600" y="24" font-size="17" font-family="$(font)" fill="rgb(0,0,0)"  >Profile results</text>
