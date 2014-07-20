@@ -1,4 +1,5 @@
 const snapsvgjs = Pkg.dir("ProfileView", "templates", "snap.svg-min.js")
+const viewerjs = Pkg.dir("ProfileView", "src", "viewer.js")
 
 function escape_script(js::String)
     return replace(js, "]]", "] ]")
@@ -15,7 +16,9 @@ function svgheader(f::IO; width=1200, height=706, font="Verdana")
         <stop stop-color="#eeeeee" offset="5%" />
         <stop stop-color="#eeeeb0" offset="95%" />
     </linearGradient>
-    <rect id="clip-rect" x="0" y="0" width="250mm" height="80mm" />
+    <clipPath id="image-frame">
+      <rect id="clip-rect" x="0" y="0" width="250mm" height="80mm" />
+    </clipPath>
 </defs>
 <style type="text/css">
     rect[rx]:hover { stroke:black; stroke-width:1; }
