@@ -17,7 +17,7 @@ function svgheader(f::IO; width=1200, height=706, font="Verdana")
         <stop stop-color="#eeeeb0" offset="95%" />
     </linearGradient>
     <clipPath id="image-frame">
-      <rect id="clip-rect" x="0" y="0" width="250mm" height="80mm" />
+      <rect id="clip-rect" x="0" y="0" width=$(width) height=$(height) />
     </clipPath>
 </defs>
 <style type="text/css">
@@ -33,10 +33,10 @@ function svgheader(f::IO; width=1200, height=706, font="Verdana")
 ]]>
 </script>
 <g id="frame" clip-path="url(#image-frame)">
-<rect x="0.0" y="0" width="$(width).0" height="$(height).0" fill="url(#background)"  />
-<g id="viewport" transform="scale(1)">
-<text text-anchor="middle" x="600" y="24" font-size="17" font-family="$(font)" fill="rgb(0,0,0)"  >Profile results</text>
+<rect class="background" x="0.0" y="0" width="$(width).0" height="$(height).0" fill="url(#background)"  />
+<text class="background" text-anchor="middle" x="600" y="24" font-size="17" font-family="$(font)" fill="rgb(0,0,0)"  >Profile results</text>
 <text text-anchor="left" x="10" y="$y_msg" font-size="12" font-family="$(font)" fill="rgb(0,0,0)"  >Function:</text>
 <text text-anchor="" x="70" y="$y_msg" font-size="12" font-family="$(font)" fill="rgb(0,0,0)" id="details" > </text>
+<g id="viewport" transform="scale(1)">
 """)
 end

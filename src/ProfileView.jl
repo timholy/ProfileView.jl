@@ -242,17 +242,17 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
         li = lidict[tag.ip]
         info = "$(li.func) in $(li.file):$(li.line)"
         shortinfo = info
-        if avgcharwidth*3 > width
-            shortinfo = ""
-        elseif length(shortinfo) * avgcharwidth > width
-            nchars = int(width/avgcharwidth)-2
-            shortinfo = eschtml(info[1:nchars] * "..")
-        end
+        #if avgcharwidth*3 > width
+        #    shortinfo = ""
+        #elseif length(shortinfo) * avgcharwidth > width
+        #    nchars = int(width/avgcharwidth)-2
+        #    shortinfo = eschtml(info[1:nchars] * "..")
+        #end
         info = eschtml(info)
         red = iround(255*rgb.r)
         green = iround(255*rgb.g)
         blue = iround(255*rgb.b)
-        print(f, """<rect x="$xstart" y="$y" width="$width" height="$ystep" fill="rgb($red,$green,$blue)" rx="2" ry="2" data-info="$info"/>\n""")
+        print(f, """<rect vector-effect="non-scaling-stroke" x="$xstart" y="$y" width="$width" height="$ystep" fill="rgb($red,$green,$blue)" rx="2" ry="2" data-info="$info"/>\n""")
         #if shortinfo != ""
         println(f, """\n<text text-anchor="" x="$(xstart+4)" y="$(y+11.5)" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" data-shortinfo="$shortinfo" onmouseover="s('$info')" onmouseout="c()"></text>""")
         # end
@@ -297,7 +297,7 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
     end
     print(f, """
         </g></g>
-script> <![CDATA[$(escape_script(readall(snapsvgjs)))
+<script> <![CDATA[$(escape_script(readall(snapsvgjs)))
 ]]> </script>
         <script><![CDATA[$(escape_script(readall(viewerjs)))
         ]]> </script>
