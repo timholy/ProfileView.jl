@@ -216,6 +216,7 @@ end
 mimewritable(::MIME"image/svg+xml", pd::ProfileData) = true
 
 function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
+
     img = pd.img
     lidict = pd.lidict
     imgtags = pd.imgtags
@@ -258,7 +259,8 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
         # end
     end
 
-    svgheader(f, width=width, height=height)
+    fig_id = string("fig-", replace(string(Base.Random.uuid4()), "-", ""))
+    svgheader(f, fig_id, width=width, height=height)
     # rectangles are on a grid and split across multiple columns (must span similar adjacent ones together)
     for r in 1:nrows
         # top of rectangle:
@@ -295,14 +297,7 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
             prevtag = tag
         end
     end
-    print(f, """
-        </g></g>
-<script> <![CDATA[$(escape_script(readall(snapsvgjs)))
-]]> </script>
-        <script><![CDATA[$(escape_script(readall(viewerjs)))
-        ]]> </script>
-    </svg>
-    """)
+    svgfinish(f, fig_id)
 end
 
 function buildtags!(rowtags, parent, level)
