@@ -25,8 +25,8 @@ function svgheader(f::IO, fig_id::String; width=1200, height=706, font="Verdana"
     text:hover { stroke:black; stroke-width:1; stroke-opacity:0.35; }
 </style>
 <g id="$fig_id-frame" clip-path="url(#$fig_id-image-frame)">
-<rect class="background" x="0.0" y="0" width="$(width).0" height="$(height).0" fill="url(#background)"  />
-<text class="background" text-anchor="middle" x="600" y="24" font-size="17" font-family="$(font)" fill="rgb(0,0,0)"  >Profile results</text>
+<rect class="pvbackground" x="0.0" y="0" width="$(width).0" height="$(height).0" fill="url(#background)"  />
+<text class="pvbackground" text-anchor="middle" x="600" y="24" font-size="17" font-family="$(font)" fill="rgb(0,0,0)"  >Profile results</text>
 <text text-anchor="left" x="10" y="$y_msg" font-size="12" font-family="$(font)" fill="rgb(0,0,0)"  >Function:</text>
 <text text-anchor="" x="70" y="$y_msg" font-size="12" font-family="$(font)" fill="rgb(0,0,0)" id="$fig_id-details" > </text>
 <g id="$fig_id-viewport" transform="scale(1)">
@@ -49,25 +49,32 @@ function svgfinish(f::IO, fig_id)
                   factory(glob.Snap, glob.ProfileView);
               }
             })(window, function (Snap, ProfileView) {
+                var svg = Snap.select('svg').node;
+                var pt = svg.createSVGPoint();
+
                 var fig = {};
 
                 fig.viewport = Snap.select('#$fig_id-viewport');
+                fig.frame = Snap.select('#$fig_id-frame');
 
                 fig.viewport_cx = fig.viewport.getBBox().cx;
 
                 fig.rects = Snap.selectAll('#$fig_id-viewport rect');
                 fig.texts = Snap.selectAll('#$fig_id-viewport text');
-
-                fig.clip_width = Snap.select('#$fig_id-clip-rect').getBBox().w;
-                fig.clip_middle = Snap.select('#$fig_id-clip-rect').getBBox().cy;
+                fig.clip = Snap.select('#$fig_id-clip-rect');
+                fig.clip_width  = fig.clip.getBBox().w;
+                fig.clip_middle = fig.clip.getBBox().cy;
                 fig.details = document.getElementById("$fig_id-details").firstChild; 
+
+                fig.scale = 1.0;
+                fig.shift = fig.viewport_cx;
 
                 ProfileView.reset(fig)
 
                 fig.rects.forEach(function(rect, i){
                     rect.dblclick(function(){
                         bbox = rect.getBBox();
-                        ProfileView.move_and_zoom(bbox.cx, fig.clip_width/bbox.w, fig);
+                        ProfileView.move_and_zoom(bbox.cx, bbox.cx, fig.clip_width/bbox.w, fig);
                     })
                     .mouseover(function(){
                         fig.details.nodeValue = rect.node.getAttribute("data-info");
@@ -80,7 +87,7 @@ function svgfinish(f::IO, fig_id)
                 fig.texts.forEach(function(text, i){
                     text.dblclick(function(){
                         bbox = fig.rects[i].getBBox();
-                        ProfileView.move_and_zoom(bbox.cx, fig.clip_width/bbox.w, fig);
+                        ProfileView.move_and_zoom(bbox.cx, bbox.cx, fig.clip_width/bbox.w, fig);
                     })
                     .mouseover(function(){
                         fig.details.nodeValue = fig.rects[i].node.getAttribute("data-info");
@@ -89,11 +96,47 @@ function svgfinish(f::IO, fig_id)
                         fig.details.nodeValue = "";
                     });
                 })
-                Snap.selectAll("#$fig_id-frame .background").forEach(function(bg){
+                Snap.selectAll("#$fig_id-frame .pvbackground").forEach(function(bg){
                    bg.dblclick(function(e){
                        ProfileView.reset(fig);
                     });
                 });
+
+                function throttle(delay, callback) {
+                    var previousCall = new Date().getTime();
+                    return function() {
+                        var time = new Date().getTime();
+
+                        if ((time - previousCall) >= delay) {
+                            previousCall = time;
+                            callback.apply(null, arguments);
+                        }
+                        else {
+                            arguments[0].preventDefault();
+                        }
+                    };
+                }
+
+                var MouseWheelHandler = throttle(400, function(e) {
+                    e.preventDefault();
+                    var e = window.event || e;
+                    var delta = Math.max(-1, Math.min(1, (e.wheelDelta || -e.detail)));
+                    pt.x = e.clientX;
+                    pt.y = e.clientY;
+
+                    pt.matrixTransform(fig.viewport.node.getScreenCTM().inverse());
+                    var targetScale = fig.scale + 0.2*delta;
+                    ProfileView.move_and_zoom(fig.shift, pt.x, targetScale, fig, 400);
+                    return false;
+                })
+                frame = fig.frame.node;
+                if (frame.addEventListener) {
+                    frame.addEventListener("mousewheel", MouseWheelHandler, false);
+                    frame.addEventListener("DOMMouseScroll", MouseWheelHandler, false);
+                }
+                else {
+                    frame.attachEvent("onmousewheel", MouseWheelHandler);
+                }
 
             fig.viewport.drag();
     }); ]]></script>
