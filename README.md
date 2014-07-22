@@ -96,12 +96,22 @@ found [below](#gcdetails).
 
 ## GUI features
 
+### Tk Interface
+
 - Right-clicking on a bar will cause information about this line to be
   printed in the REPL. This can be a convenient way to "mark" lines
   for later investigation.
 
 - Click-drag lets you zoom in on a specific region of the
   image. Double-click to restore the full view.
+
+### IJulia (SVG) Interface
+
+- Double-clicking on a bar will zoom in the graph around the bar.
+
+- Double-clicking on the background will zoom out to show the entire graph.
+
+- Click-drag anywhere on the graph will allow for panning.
 
 ## Command-line options
 
