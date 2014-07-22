@@ -216,6 +216,7 @@ end
 mimewritable(::MIME"image/svg+xml", pd::ProfileData) = true
 
 function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
+
     img = pd.img
     lidict = pd.lidict
     imgtags = pd.imgtags
@@ -242,23 +243,24 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
         li = lidict[tag.ip]
         info = "$(li.func) in $(li.file):$(li.line)"
         shortinfo = info
-        if avgcharwidth*3 > width
-            shortinfo = ""
-        elseif length(shortinfo) * avgcharwidth > width
-            nchars = int(width/avgcharwidth)-2
-            shortinfo = eschtml(info[1:nchars] * "..")
-        end
+        #if avgcharwidth*3 > width
+        #    shortinfo = ""
+        #elseif length(shortinfo) * avgcharwidth > width
+        #    nchars = int(width/avgcharwidth)-2
+        #    shortinfo = eschtml(info[1:nchars] * "..")
+        #end
         info = eschtml(info)
         red = iround(255*rgb.r)
         green = iround(255*rgb.g)
         blue = iround(255*rgb.b)
-        print(f, """<rect x="$xstart" y="$y" width="$width" height="$ystep" fill="rgb($red,$green,$blue)" rx="2" ry="2" onmouseover="s('$info')" onmouseout="c()"/>""")
-        if shortinfo != ""
-            println(f, """\n<text text-anchor="" x="$(xstart+4)" y="$(y+11.5)" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" onmouseover="s('$info')" onmouseout="c()">\n$shortinfo\n</text>""")
-        end
+        print(f, """<rect vector-effect="non-scaling-stroke" x="$xstart" y="$y" width="$width" height="$ystep" fill="rgb($red,$green,$blue)" rx="2" ry="2" data-shortinfo="$shortinfo" data-info="$info"/>\n""")
+        #if shortinfo != ""
+        println(f, """\n<text text-anchor="" x="$(xstart+4)" y="$(y+11.5)" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" ></text>""")
+        # end
     end
 
-    svgheader(f, width=width, height=height)
+    fig_id = string("fig-", replace(string(Base.Random.uuid4()), "-", ""))
+    svgheader(f, fig_id, width=width, height=height)
     # rectangles are on a grid and split across multiple columns (must span similar adjacent ones together)
     for r in 1:nrows
         # top of rectangle:
@@ -295,7 +297,7 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
             prevtag = tag
         end
     end
-    println(f, "\n</svg>")
+    svgfinish(f, fig_id)
 end
 
 function buildtags!(rowtags, parent, level)
