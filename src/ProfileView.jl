@@ -2,7 +2,7 @@ module ProfileView
 
 using Color, Base.Graphics
 
-useTk = !isdefined(Main, :IJulia)
+useTk = !isdefined(Main, :IJulia) || (isdefined(Main, :PROFILEVIEW_USETK) && Main.PROFILEVIEW_USETK)
 if useTk
     using Tk
     import Cairo
