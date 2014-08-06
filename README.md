@@ -105,6 +105,9 @@ found [below](#gcdetails).
 - Click-drag lets you zoom in on a specific region of the
   image. Double-click to restore the full view.
 
+- To use the TK interface in IJulia, set `PROFILEVIEW_USETK = true` in 
+  the `Main` module before `using ProfileView`.
+
 ### IJulia (SVG) Interface
 
 - Double-clicking on a bar will zoom in the graph around the bar.
