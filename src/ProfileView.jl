@@ -2,7 +2,11 @@ module ProfileView
 
 using Color, Base.Graphics
 
-useTk = !isdefined(Main, :IJulia) || (isdefined(Main, :PROFILEVIEW_USETK) && Main.PROFILEVIEW_USETK)
+if isdefined(Main, :PROFILEVIEW_USETK)
+    useTk = Main.PROFILEVIEW_USETK
+else
+    useTk = !isdefined(Main, :IJulia)
+end
 if useTk
     using Tk
     import Cairo
@@ -212,6 +216,20 @@ else
         ProfileData(img, lidict, imgtags, fontsize)
     end
 end
+
+function svgwrite(filename::String, data, lidict; C = false, colorgc = true, fontsize = 12, combine = true)
+    img, lidict, imgtags = prepare(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine)
+    pd = ProfileData(img, lidict, imgtags, fontsize)
+    open(filename, "w") do file
+        writemime(file, "image/svg+xml", pd)
+    end
+    nothing
+end
+function svgwrite(filename::String; kwargs...)
+    data, lidict = Profile.retrieve()
+    svgwrite(filename, data, lidict; kwargs...)
+end
+
 
 mimewritable(::MIME"image/svg+xml", pd::ProfileData) = true
 
