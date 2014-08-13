@@ -15,9 +15,8 @@ if useTk
         bb::BoundingBox  # in user-coordinates
         c::Canvas
     end
-else
-    include("svgwriter.jl")
 end
+include("svgwriter.jl")
 
 import Base: contains, isequal, show, mimewritable, writemime
 
@@ -260,6 +259,7 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
         width = xend - xstart
         li = lidict[tag.ip]
         info = "$(li.func) in $(li.file):$(li.line)"
+        info = eschtml(info)
         shortinfo = info
         #if avgcharwidth*3 > width
         #    shortinfo = ""
@@ -267,7 +267,6 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
         #    nchars = int(width/avgcharwidth)-2
         #    shortinfo = eschtml(info[1:nchars] * "..")
         #end
-        info = eschtml(info)
         red = iround(255*rgb.r)
         green = iround(255*rgb.g)
         blue = iround(255*rgb.b)
