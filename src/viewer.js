@@ -2,12 +2,29 @@
 
 var avgcharwidth = 6;
 
+var Rect = React.createClass({displayName: 'Rect',
+    clickHandler: function(e){
+        console.log(e);
+        this.props.zoom(1200/this.props.width, this.props.x + 0.5*this.props.width);
+    },
+    render: function(){
+        return React.DOM.rect( {'vector-effect':"non-scaling-stroke", key:this.props.key, x:this.props.x, y:this.props.y, width:this.props.width, height:this.props.height, fill:"#" + this.props.fill, onClick:this.clickHandler});
+    }
+})
+
 var RectLayer = React.createClass({displayName: 'RectLayer',
+    getInitialState: function(){
+        return {scale: 1.0, xcenter: 600};
+    },
+    zoomHandler: function(scale, xcenter) {
+        this.setState({scale: scale, xcenter: xcenter});
+    },
     render: function(){
         return (
-            React.DOM.g(null, 
+            React.DOM.g( {transform:"translate(" + -(this.state.xcenter-600) + ",0) matrix(" + this.state.scale + " 0 0 1 " + (this.state.xcenter*(1 - this.state.scale)) + " 0)"}, 
                 this.props.data.map(function(result, index){
-                    return React.DOM.rect( {'vector-effect':"non-scaling-stroke", key:index, x:result.x, y:result.y, width:result.width, height:result.height, fill:"#" + result.fill});})
+                    return Rect( {key:index, x:result.x, y:result.y, width:result.width, height:result.height, fill:result.fill, zoom:this.zoomHandler});}.bind(this))
+
             )
         )
     }
