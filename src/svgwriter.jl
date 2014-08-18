@@ -29,7 +29,7 @@ function svgheader(f::IO, fig_id::String; width=1200, height=706, font="Verdana"
 <text class="pvbackground" text-anchor="middle" x="600" y="24" font-size="17" font-family="$(font)" fill="rgb(0,0,0)"  >Profile results</text>
 <text text-anchor="left" x="10" y="$y_msg" font-size="12" font-family="$(font)" fill="rgb(0,0,0)"  >Function:</text>
 <text text-anchor="" x="70" y="$y_msg" font-size="12" font-family="$(font)" fill="rgb(0,0,0)" id="$fig_id-details" > </text>
-<g id="$fig_id-viewport" transform="scale(1)">
+<g id="$fig_id-viewport" transform="scale(1)"></g></g>
 """)
 end
 

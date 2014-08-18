@@ -267,17 +267,17 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
         #    nchars = int(width/avgcharwidth)-2
         #    shortinfo = eschtml(info[1:nchars] * "..")
         #end
-        red = iround(255*rgb.r)
-        green = iround(255*rgb.g)
-        blue = iround(255*rgb.b)
-        print(f, """<rect vector-effect="non-scaling-stroke" x="$xstart" y="$y" width="$width" height="$ystep" fill="rgb($red,$green,$blue)" rx="2" ry="2" data-shortinfo="$shortinfo" data-info="$info"/>\n""")
-        #if shortinfo != ""
-        println(f, """\n<text text-anchor="" x="$(xstart+4)" y="$(y+11.5)" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" ></text>""")
-        # end
+        #red = iround(255*rgb.r)
+        #green = iround(255*rgb.g)
+        #blue = iround(255*rgb.b)
+        print(f, """{x:$xstart,y:$y,width:$width,height:$ystep,fill:"$(hex(rgb))",shortinfo:"$shortinfo",info:"$info"},\n""")
     end
 
     fig_id = string("fig-", replace(string(Base.Random.uuid4()), "-", ""))
     svgheader(f, fig_id, width=width, height=height)
+    print(f, """<script type="text/javascript"><![CDATA[
+        data = [
+        """)
     # rectangles are on a grid and split across multiple columns (must span similar adjacent ones together)
     for r in 1:nrows
         # top of rectangle:
@@ -314,7 +314,8 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
             prevtag = tag
         end
     end
-    svgfinish(f, fig_id)
+    print(f, """];\n]]></script></svg>""")
+    #svgfinish(f, fig_id)
 end
 
 function buildtags!(rowtags, parent, level)
