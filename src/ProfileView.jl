@@ -261,21 +261,12 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
         info = "$(li.func) in $(li.file):$(li.line)"
         info = eschtml(info)
         shortinfo = info
-        #if avgcharwidth*3 > width
-        #    shortinfo = ""
-        #elseif length(shortinfo) * avgcharwidth > width
-        #    nchars = int(width/avgcharwidth)-2
-        #    shortinfo = eschtml(info[1:nchars] * "..")
-        #end
-        #red = iround(255*rgb.r)
-        #green = iround(255*rgb.g)
-        #blue = iround(255*rgb.b)
         print(f, """{x:$xstart,y:$y,width:$width,height:$ystep,fill:"$(hex(rgb))",shortinfo:"$shortinfo",info:"$info"},\n""")
     end
 
     fig_id = string("fig-", replace(string(Base.Random.uuid4()), "-", ""))
     svgheader(f, fig_id, width=width, height=height)
-    print(f, """<script type="text/javascript"><![CDATA[
+    print(f, """<script type="text/javascript">
         data = [
         """)
     # rectangles are on a grid and split across multiple columns (must span similar adjacent ones together)
@@ -314,8 +305,8 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
             prevtag = tag
         end
     end
-    print(f, """];\n]]></script></svg>""")
-    #svgfinish(f, fig_id)
+    print(f, """];\n</script>""")
+    svgfinish(f, fig_id)
 end
 
 function buildtags!(rowtags, parent, level)
