@@ -48,7 +48,7 @@ function prepare(data; C = false, lidict = nothing, colorgc = true, combine = tr
     bt, counts = Profile.tree_aggregate(data)
     if isempty(counts)
         Profile.warning_empty()
-        return
+        error("Nothing to view")
     end
     len = Int[length(x) for x in bt]
     keep = len .> 0
