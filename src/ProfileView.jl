@@ -113,7 +113,7 @@ end
 if useTk
     function view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true)
         img, lidict, imgtags = prepare(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine)
-        img24 = [convert(Uint32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
+        img24 = Uint32[convert(Uint32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
         surf = Cairo.CairoRGBSurface(img24)
         imw = size(img24,2)
         imh = size(img24,1)
