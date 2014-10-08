@@ -25,7 +25,7 @@ PVData(ip::Uint, hspan::Range1{Int}) = PVData(ip, hspan, 0)
 # lidict is just for debugging
 function buildgraph!(parent::Node, bt::Vector{Vector{Uint}}, counts::Vector{Int}, level::Int, ip2so::Dict, so2ip::Dict, lidict)
     # Organize backtraces into groups that are identical up to this level
-    dorder = (Int=>Vector{Int})[]
+    dorder = Dict{Int,Vector{Int}}()
     for i = 1:length(bt)
         ip = bt[i][level+1]
         so = ip2so[ip]

@@ -20,6 +20,11 @@ include("svgwriter.jl")
 
 import Base: contains, isequal, show, mimewritable, writemime
 
+if VERSION < v"0.4.0-dev+980"
+    builddict(a, b) = Dict(a,b)
+else
+    builddict(a, b) = Dict(zip(a,b))
+end
 include("tree.jl")
 include("pvtree.jl")
 
@@ -62,19 +67,19 @@ function prepare(data; C = false, lidict = nothing, colorgc = true, combine = tr
     nuip = length(uip)
     if lidict == nothing
         lkup = [Profile.lookup(ip) for ip in uip]
-        lidict = Dict(uip, lkup)
+        lidict = builddict(uip, lkup)
     else
         lkup = [lidict[ip] for ip in uip]
     end
-    isjl = Dict(uip, [!lkup[i].fromC for i = 1:nuip])
-    isgc = Dict(uip, [lkup[i].func == "jl_gc_collect" for i = 1:nuip])
+    isjl = builddict(uip, [!lkup[i].fromC for i = 1:nuip])
+    isgc = builddict(uip, [lkup[i].func == "jl_gc_collect" for i = 1:nuip])
     isjl[uint(0)] = false  # needed for root below
     isgc[uint(0)] = false
     p = Profile.liperm(lkup)
     rank = similar(p)
     rank[p] = 1:length(p)
-    ip2so = Dict(uip, rank)
-    so2ip = Dict(rank, uip)
+    ip2so = builddict(uip, rank)
+    so2ip = builddict(rank, uip)
     # Build the graph
     level = 0
     w = sum(counts)
