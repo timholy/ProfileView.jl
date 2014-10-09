@@ -18,9 +18,9 @@ export Node,
 
 type Node{T}
     data::T
-    parent::Node
-    child::Node
-    sibling::Node
+    parent::Node{T}
+    child::Node{T}
+    sibling::Node{T}
     
     # Constructor for the root of the tree
     function Node(data::T)
