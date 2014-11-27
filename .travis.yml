@@ -13,5 +13,4 @@ before_install:
   - sudo apt-get update -qq -y
   - sudo apt-get install libpcre3-dev julia -y
 script:
-  - julia -e 'Pkg.init(); run(`ln -s $(pwd()) $(Pkg.dir("ProfileView"))`); Pkg.pin("ProfileView"); Pkg.resolve()'
-  - julia -e 'using ProfileView; @assert isdefined(:ProfileView); @assert typeof(ProfileView) === Module'
+  - xvfb-run julia -e 'versioninfo(); Pkg.init(); Pkg.clone(pwd()); Pkg.build("ProfileView"); Pkg.test("ProfileView")'
