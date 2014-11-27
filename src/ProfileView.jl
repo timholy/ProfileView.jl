@@ -5,7 +5,7 @@ using Color, Base.Graphics
 if isdefined(Main, :PROFILEVIEW_USETK)
     useTk = Main.PROFILEVIEW_USETK
 else
-    useTk = !isdefined(Main, :IJulia)
+    useTk = !isdefined(Main, :IJulia) && !isdefined(Main, :Jewel)
 end
 if useTk
     using Tk

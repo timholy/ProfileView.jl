@@ -110,7 +110,7 @@ found [below](#gcdetails).
 - To use the TK interface in IJulia, set `PROFILEVIEW_USETK = true` in 
   the `Main` module before `using ProfileView`.
 
-### IJulia (SVG) Interface
+### IJulia/LightTable (SVG) Interface
 
 - Double-clicking on a bar will zoom in the graph around the bar.
 
