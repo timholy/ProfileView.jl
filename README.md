@@ -1,5 +1,7 @@
 # ProfileView.jl
 
+[![Build Status](https://travis-ci.org/JuliaLang/ProfileView.jl.svg?branch=master)](https://travis-ci.org/JuliaLang/ProfileView.jl)
+
 This package contains tools for visualizing profiling data collected
 with [Julia's][Julia] built-in sampling
 [profiler](http://docs.julialang.org/en/latest/stdlib/profile/). It
