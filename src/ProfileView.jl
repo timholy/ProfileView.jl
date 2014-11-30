@@ -1,6 +1,7 @@
 module ProfileView
 
 using Color, Base.Graphics
+using Compat
 
 if isdefined(Main, :PROFILEVIEW_USETK)
     useTk = Main.PROFILEVIEW_USETK
@@ -108,7 +109,7 @@ function prepare(data; C = false, lidict = nothing, colorgc = true, combine = tr
 #     println("\nPruned:")
 #     Tree.showedges(STDOUT, root, x -> string(get(lidict, x.ip, "root"), ", status = ", x.status))
     # Generate a "tagged" image
-    rowtags = {fill(TAGNONE, w)}
+    rowtags = Any[fill(TAGNONE, w)]
     buildtags!(rowtags, root, 1)
     imgtags = hcat(rowtags...)
     img = buildimg(imgtags, colors, bkg, gccolor, colorgc, combine, lidict)
@@ -160,8 +161,8 @@ if useTk
         end
         # From a given position, find the underlying tag
         function gettag(xu, yu)
-            x = iceil(xu)
-            y = iceil(yu)
+            x = ceil(Int, xu)
+            y = ceil(Int, yu)
             Y = size(imgtags, 2)
             x = max(1, min(x, size(imgtags, 1)))
             y = max(1, min(y, Y))
