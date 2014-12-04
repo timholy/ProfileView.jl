@@ -63,6 +63,17 @@ function prepare(data; C = false, lidict = nothing, colorgc = true, combine = tr
     end
     bt = bt[keep]
     counts = counts[keep]
+    # Tk has trouble with very large images. If needed, pretend we took fewer samples.
+    ncounts = sum(counts)
+    if ncounts > 10^4
+        counts = [floor(Int, c/(ncounts/10^4)) for c in counts]  # uniformly reduce the number of backtraces
+        keep = counts .> 0
+        counts = counts[keep]
+        bt = bt[keep]
+        if isempty(counts)
+            error("No backtraces survived pruning.")
+        end
+    end
     # Do code address lookups on all unique instruction pointers
     uip = unique(vcat(bt...))
     nuip = length(uip)
