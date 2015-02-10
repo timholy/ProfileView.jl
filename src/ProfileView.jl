@@ -1,6 +1,6 @@
 module ProfileView
 
-using Color, Base.Graphics
+using Color, Graphics
 using Compat
 
 if isdefined(Main, :PROFILEVIEW_USETK)
