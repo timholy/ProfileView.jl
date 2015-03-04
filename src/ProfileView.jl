@@ -1,7 +1,13 @@
 module ProfileView
 
-using Color, Graphics
+using Color
 using Compat
+if VERSION < v"0.4.0-dev+3275"
+    using Base.Graphics
+else
+    using Graphics
+end
+
 
 if isdefined(Main, :PROFILEVIEW_USETK)
     useTk = Main.PROFILEVIEW_USETK
