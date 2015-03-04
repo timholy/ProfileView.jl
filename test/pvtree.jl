@@ -16,10 +16,10 @@ node(ip::Integer) = PVTree.PVData(uint(ip), 1:0)
 
 if VERSION < v"0.4.0-dev+980"
     isjl = Dict(uint(0:7),[true,false,true,false,true,true,true,false])
-    isgc = Dict(uint(0:7),[falses(7),true])
+    isgc = Dict(uint(0:7),[falses(7);true])
 else
     isjl = Dict(zip(uint(0:7),[true,false,true,false,true,true,true,false]))
-    isgc = Dict(zip(uint(0:7),[falses(7),true]))
+    isgc = Dict(zip(uint(0:7),[falses(7);true]))
 end
 
 function buildraw()
