@@ -122,13 +122,16 @@ found [below](#gcdetails).
 
 The `view` command has the following syntax:
 ```
-function view(data = Profile.fetch(); C = false, colorgc = true, fontsize = 12, combine = true)
+function view(data = Profile.fetch(); lidict = nothing, C = false, colorgc = true, fontsize = 12, combine = true)
 ```
 Here is the meaning of the different arguments:
 
 - The first is the vector containing backtraces. You can use `data1 =
   copy(Profile.fetch()); Profile.clear()` to store and examine results
   from multiple profile runs simultaneously.
+
+- `lidict` is a dictionary containing "line information."
+  See the section on saving profile data below.
 
 - `C` is a flag controlling whether lines corresponding to C and Fortran
   code are displayed. (Internally, ProfileView uses the information
@@ -141,6 +144,26 @@ Here is the meaning of the different arguments:
 - `fontsize` controls the size of the font displayed as a tooltip.
 
 - `combine` is explained [elsewhere](http://docs.julialang.org/en/latest/stdlib/profile/).
+
+### Saving profile data
+
+You can save profile data for later viewing and analysis using the JLD file format.
+The main trick is that the backtrace data, on its own, is only valid within a particular
+julia session. To become portable, you have to save "line information" that looks
+up the particular line number in the source code corresponding to a particular
+machine instruction. Here's an example:
+
+```julia
+bt, lidict = Profile.retrieve()
+using HDF5, JLD
+@save "/tmp/profdata.jld" bt lidict
+```
+Now open a new julia session, and try the following:
+```
+using HDF5, JLD, ProfileView
+@load "/tmp/profdata.jld"
+ProfileView.view(bt, lidict=lidict)
+```
 
 <a name="gcdetails"/>
 ### Important points about garbage-collection
