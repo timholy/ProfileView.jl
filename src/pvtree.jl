@@ -1,17 +1,18 @@
 module PVTree
 
 using ..Tree
+using Compat
 
 export PVData, buildgraph!, prunegraph!
 
 # ProfileView data we need attached to each node of the graph:
 type PVData
     ip::Uint           # the instruction pointer
-    hspan::Range1{Int} # horizontal span (used as the x-axis in display)
+    hspan::UnitRange{Int} # horizontal span (used as the x-axis in display)
     status::Int        # nonzero for special handling, (e.g., gc events)
 end
-PVData(hspan::Range1{Int}) = PVData(uint(0), hspan, 0)
-PVData(ip::Uint, hspan::Range1{Int}) = PVData(ip, hspan, 0)
+PVData(hspan::UnitRange{Int}) = PVData(@compat(UInt(0)), hspan, 0)
+PVData(ip::Uint, hspan::UnitRange{Int}) = PVData(ip, hspan, 0)
 
 # Suppose we have several dicts:
 #    isjl[ip]: true/false depending on whether it's a Julia function rather than C/Fortran
