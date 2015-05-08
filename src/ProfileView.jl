@@ -42,7 +42,7 @@ immutable TagData
     ip::Uint
     status::Int
 end
-const TAGNONE = TagData(uint(0), -1)
+const TAGNONE = TagData(@compat(UInt(0)), -1)
 
 type ProfileData
     img
@@ -91,8 +91,8 @@ function prepare(data; C = false, lidict = nothing, colorgc = true, combine = tr
     end
     isjl = builddict(uip, [!lkup[i].fromC for i = 1:nuip])
     isgc = builddict(uip, [lkup[i].func == "jl_gc_collect" for i = 1:nuip])
-    isjl[uint(0)] = false  # needed for root below
-    isgc[uint(0)] = false
+    isjl[@compat(UInt(0))] = false  # needed for root below
+    isgc[@compat(UInt(0))] = false
     p = Profile.liperm(lkup)
     rank = similar(p)
     rank[p] = 1:length(p)
@@ -359,7 +359,7 @@ function buildimg(imgtags, colors, bkg, gccolor, colorgc::Bool, combine::Bool, l
     w = size(imgtags,1)
     h = size(imgtags,2)
     img = fill(bkg, w, h)
-    colorlen = int(length(colors)/2)
+    colorlen = round(Int, length(colors)/2)
     for j = 1:h
         coloroffset = colorlen*iseven(j)
         colorindex = 1
@@ -399,7 +399,7 @@ function buildimg(imgtags, colors, bkg, gccolor, colorgc::Bool, combine::Bool, l
     img
 end
 
-function fillrow!(img, j, rng::Range1{Int}, colorindex, colorlen, regcolor, gccolor, status)
+function fillrow!(img, j, rng::UnitRange{Int}, colorindex, colorlen, regcolor, gccolor, status)
     if status > 0
         img[rng,j] = gccolor
         return colorindex
