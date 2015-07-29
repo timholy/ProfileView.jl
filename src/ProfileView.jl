@@ -290,9 +290,9 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
         #    nchars = int(width/avgcharwidth)-2
         #    shortinfo = eschtml(info[1:nchars] * "..")
         #end
-        red = iround(255*rgb.r)
-        green = iround(255*rgb.g)
-        blue = iround(255*rgb.b)
+        red = round(Integer,255*rgb.r)
+        green = round(Integer,255*rgb.g)
+        blue = round(Integer,255*rgb.b)
         print(f, """<rect vector-effect="non-scaling-stroke" x="$xstart" y="$y" width="$width" height="$ystep" fill="rgb($red,$green,$blue)" rx="2" ry="2" data-shortinfo="$shortinfo" data-info="$info"/>\n""")
         #if shortinfo != ""
         println(f, """\n<text text-anchor="" x="$(xstart+4)" y="$(y+11.5)" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" ></text>""")
@@ -328,7 +328,7 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
             elseif c == ncols && tag != TAGNONE
                 # end of span at last element of row
                 xend = (c-1) * xstep + leftmargin
-                samples = int(round((xend - xstart)/xstep))
+                samples = round(Int,(xend - xstart)/xstep)
                 printrec(f, samples, xstart, xend, y, tag, img[c,r])
                 xstart = 0.0
             else
