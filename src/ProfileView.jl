@@ -1,3 +1,5 @@
+VERSION >= v"0.4.0-dev+6521" && __precompile__()
+
 module ProfileView
 
 using Colors
@@ -9,15 +11,14 @@ else
 end
 
 
-if isdefined(Main, :PROFILEVIEW_USETK)
-    useTk = Main.PROFILEVIEW_USETK
+if isdefined(Main, :PROFILEVIEW_USEGTK)
+    useGtk = Main.PROFILEVIEW_USEGTK
 else
-    useTk = !isdefined(Main, :IJulia)
+    useGtk = !isdefined(Main, :IJulia)
 end
-if useTk
-    using Tk
+if useGtk
+    using Gtk.ShortNames, GtkUtilities
     import Cairo
-    include(joinpath(Pkg.dir(), "ImageView", "src", "rubberband.jl")) # for zoom
     type ZoomCanvas
         bb::BoundingBox  # in user-coordinates
         c::Canvas
@@ -133,7 +134,7 @@ function prepare(data; C = false, lidict = nothing, colorgc = true, combine = tr
     img, lidict, imgtags
 end
 
-if useTk
+if useGtk
     function view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true)
         img, lidict, imgtags = prepare(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine)
         img24 = Uint32[convert(Uint32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
@@ -141,27 +142,59 @@ if useTk
         imw = size(img24,2)
         imh = size(img24,1)
         # Display in a window
-        win = Toplevel("Profile", 300, 300)
-        f = Frame(win)
-        pack(f, expand = true, fill = "both")
-        c = Canvas(f)
-        pack(c, expand = true, fill = "both")
+        c = @Canvas()
+        f = @Frame(c)
+        win = @Window(f, "Profile")
         czoom = ZoomCanvas(BoundingBox(0, imw, 0, imh), c)
-        c.mouse.button1press = (c, x, y) -> rubberband_start(c, x, y, (c, bb) -> zoom_bb(czoom, bb))
-        bind(c, "<Double-Button-1>", (path,x,y)->zoom_reset(czoom))
+        c.mouse.button1press = (widget, event) -> begin
+            if event.event_type == Gtk.GdkEventType.BUTTON_PRESS
+                c.mouse.motion = (c, event) -> nothing
+                rubberband_start(c, event.x, event.y, (c, bb) -> zoom_bb(czoom, bb))
+            elseif event.event_type == Gtk.GdkEventType.DOUBLE_BUTTON_PRESS
+                zoom_reset(czoom)
+            end
+        end
         lasttextbb = BoundingBox(1,0,1,0)
         imgbb = BoundingBox(0, imw, 0, imh)
+        standard_motion = function (c, event)
+            # Repair image from ovewritten text
+            ctx = getgc(c)
+            w = width(c)
+            if width(lasttextbb) > 0
+                h = height(c)
+                winbb = BoundingBox(0, w, 0, h)
+                set_coords(ctx, winbb, czoom.bb)
+                rectangle(ctx, lasttextbb)
+                set_source(ctx, surf)
+                p = Cairo.get_source(ctx)
+                Cairo.pattern_set_filter(p, Cairo.FILTER_NEAREST)
+                fill(ctx)
+            end
+            # Write the info
+            xd, yd = event.x, event.y
+            xu, yu = device_to_user(ctx, xd, yd)
+            tag = gettag(xu, yu)
+            if tag != TAGNONE
+                li = lidict[tag.ip]
+                str = string(basename(li.file), ", ", li.func, ": line ", li.line)
+                set_source(ctx, fontcolor)
+                Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
+                lasttextbb = deform(Cairo.text(ctx, xu, yu, str, halign = xd < w/3 ? "left" : xd < 2w/3 ? "center" : "right"), -2, 2, -2, 2)
+            end
+            reveal(c)
+        end
+        c.mouse.motion = standard_motion
         function zoom_bb(czoom::ZoomCanvas, bb::BoundingBox)
             czoom.bb = bb & imgbb
             redraw(czoom.c)
             reveal(czoom.c)
-            Tk.update()
+            c.mouse.motion = standard_motion
         end
         function zoom_reset(czoom::ZoomCanvas)
             czoom.bb = imgbb
             redraw(czoom.c)
             reveal(czoom.c)
-            Tk.update()
+            c.mouse.motion = standard_motion
         end
         function redraw(c)
             ctx = getgc(c)
@@ -188,39 +221,12 @@ if useTk
         c.resize = function (_)
             redraw(c)
             reveal(c)
-            Tk.update()
         end
         # Hover over a block and see the source line
-        c.mouse.motion = function (c, xd, yd)
-            # Repair image from ovewritten text
-            ctx = getgc(c)
-            w = width(c)
-            if width(lasttextbb) > 0
-                h = height(c)
-                winbb = BoundingBox(0, w, 0, h)
-                set_coords(ctx, winbb, czoom.bb)
-                rectangle(ctx, lasttextbb)
-                set_source(ctx, surf)
-                p = Cairo.get_source(ctx)
-                Cairo.pattern_set_filter(p, Cairo.FILTER_NEAREST)
-                fill(ctx)
-            end
-            # Write the info
-            xu, yu = device_to_user(ctx, xd, yd)
-            tag = gettag(xu, yu)
-            if tag != TAGNONE
-                li = lidict[tag.ip]
-                str = string(basename(li.file), ", ", li.func, ": line ", li.line)
-                set_source(ctx, fontcolor)
-                Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
-                lasttextbb = Cairo.text(ctx, xu, yu, str, halign = xd < w/3 ? "left" : xd < 2w/3 ? "center" : "right")
-            end
-            reveal(c)
-            Tk.update()
-        end
         # Right-click prints the full path, function, and line to the console
-        c.mouse.button3press = function (c, xd, yd)
+        c.mouse.button3press = function (c, event)
             ctx = getgc(c)
+            xd, yd = event.x, event.y
             xu, yu = device_to_user(ctx, xd, yd)
             tag = gettag(xu, yu)
             if tag != TAGNONE
@@ -228,8 +234,7 @@ if useTk
                 println(li.file, ", ", li.func, ": line ", li.line)
             end
         end
-        set_size(win, 300, 300)
-        c.resize(c)
+        showall(win)
         nothing
     end
 else
