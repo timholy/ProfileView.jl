@@ -170,11 +170,11 @@ ProfileView.view(bt, lidict=lidict)
 You can share your profiling results with others either as an SVG file or
 as an IJulia notebook. Simply use
 ```
-svgwrite("profile_results.svg")
+ProfileView.svgwrite("profile_results.svg")
 ```
 or
 ```
-svgwrite("profile_results.svg", bt, lidict)
+ProfileView.svgwrite("profile_results.svg", bt, lidict)
 ```
 if you've `retrieve`d stored data.
 
