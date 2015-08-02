@@ -165,6 +165,21 @@ using HDF5, JLD, ProfileView
 ProfileView.view(bt, lidict=lidict)
 ```
 
+### Saving ProfileView visualizations
+
+You can share your profiling results with others either as an SVG file or
+as an IJulia notebook. Simply use
+```
+svgwrite("profile_results.svg")
+```
+or
+```
+svgwrite("profile_results.svg", bt, lidict)
+```
+if you've `retrieve`d stored data.
+
+Alternatively, run ProfileView inside an IJulia notebook and then save the notebook.
+
 <a name="gcdetails"/>
 ### Important points about garbage-collection
 
