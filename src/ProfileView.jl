@@ -1,6 +1,6 @@
 module ProfileView
 
-using Color
+using Colors
 using Compat
 if VERSION < v"0.4.0-dev+3275"
     using Base.Graphics
@@ -51,9 +51,9 @@ type ProfileData
     fontsize
 end
 
-const bkg = color("black")
-const fontcolor = color("white")
-const gccolor = color("red")
+const bkg = colorant"black"
+const fontcolor = colorant"white"
+const gccolor = colorant"red"
 const colors = distinguishable_colors(13, [bkg,fontcolor,gccolor])[4:end]
 
 function prepare(data; C = false, lidict = nothing, colorgc = true, combine = true)
