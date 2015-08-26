@@ -208,13 +208,13 @@ function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
             elseif tag != prevtag && tag != TAGNONE && prevtag != TAGNONE
                 # End of old span and start of new one
                 xend = (c-1) * xstep + leftmargin
-                samples = int(round((xend - xstart)/xstep))
+                samples = round(Int, (xend - xstart)/xstep)
                 printrec(f, samples, xstart, xend, y, prevtag, img[c-1,r])
                 xstart = xend
             elseif tag == TAGNONE && tag != prevtag
                 # at end of span and start of nothing
                 xend = (c-1) * xstep + leftmargin
-                samples = int(round((xend - xstart)/xstep))
+                samples = round(Int, (xend - xstart)/xstep)
                 printrec(f, samples, xstart, xend, y, prevtag, img[c-1,r])
                 xstart = 0.0
             elseif c == ncols && tag != TAGNONE
