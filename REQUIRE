@@ -1,6 +1,6 @@
-julia 0.3-
-Tk
-Cairo 0.2.5-
-ImageView
+julia 0.3
+Gtk
+GtkUtilities
+Cairo 0.2.5
 Colors
 Graphics 0.1
