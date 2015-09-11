@@ -1,6 +1,6 @@
 # ProfileView.jl
 
-[![Build Status](https://travis-ci.org/JuliaLang/ProfileView.jl.svg?branch=master)](https://travis-ci.org/JuliaLang/ProfileView.jl)
+[![Build Status](https://travis-ci.org/timholy/ProfileView.jl.svg)](https://travis-ci.org/timholy/ProfileView.jl)
 
 This package contains tools for visualizing profiling data collected
 with [Julia's][Julia] built-in sampling
@@ -107,7 +107,7 @@ found [below](#gcdetails).
 - Click-drag lets you zoom in on a specific region of the
   image. Double-click to restore the full view.
 
-- To use the TK interface in IJulia, set `PROFILEVIEW_USETK = true` in 
+- To use the TK interface in IJulia, set `PROFILEVIEW_USETK = true` in
   the `Main` module before `using ProfileView`.
 
 ### IJulia (SVG) Interface
