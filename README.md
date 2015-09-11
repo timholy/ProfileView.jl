@@ -98,16 +98,19 @@ found [below](#gcdetails).
 
 ## GUI features
 
-### Tk Interface
+### Gtk Interface
 
 - Right-clicking on a bar will cause information about this line to be
   printed in the REPL. This can be a convenient way to "mark" lines
   for later investigation.
 
 - Click-drag lets you zoom in on a specific region of the
-  image. Double-click to restore the full view.
+  image. Double-click to restore the full view. You can pan by
+  scrolling the mouse (scroll=vertical, SHIFT-scroll=horizontal), and
+  change zoom level with CTRL-scroll. You can also use your keyboard
+  (arrow keys, plus SHIFT and CTRL modifiers).
 
-- To use the TK interface in IJulia, set `PROFILEVIEW_USETK = true` in
+- To use the Gtk interface in IJulia, set `PROFILEVIEW_USEGTK = true` in
   the `Main` module before `using ProfileView`.
 
 ### IJulia (SVG) Interface
