@@ -7,12 +7,12 @@ export PVData, buildgraph!, prunegraph!
 
 # ProfileView data we need attached to each node of the graph:
 type PVData
-    ip::Uint           # the instruction pointer
+    ip::UInt           # the instruction pointer
     hspan::UnitRange{Int} # horizontal span (used as the x-axis in display)
     status::Int        # nonzero for special handling, (e.g., gc events)
 end
 PVData(hspan::UnitRange{Int}) = PVData(@compat(UInt(0)), hspan, 0)
-PVData(ip::Uint, hspan::UnitRange{Int}) = PVData(ip, hspan, 0)
+PVData(ip::UInt, hspan::UnitRange{Int}) = PVData(ip, hspan, 0)
 
 # Suppose we have several dicts:
 #    isjl[ip]: true/false depending on whether it's a Julia function rather than C/Fortran
@@ -24,7 +24,7 @@ PVData(ip::Uint, hspan::UnitRange{Int}) = PVData(ip, hspan, 0)
 # Build the whole graph. Later we'll prune it depending on C=true/false
 # ("peeking ahead" for gc events will be easier if we have the whole thing)
 # lidict is just for debugging
-function buildgraph!(parent::Node, bt::Vector{Vector{Uint}}, counts::Vector{Int}, level::Int, ip2so::Dict, so2ip::Dict, lidict)
+function buildgraph!(parent::Node, bt::Vector{Vector{UInt}}, counts::Vector{Int}, level::Int, ip2so::Dict, so2ip::Dict, lidict)
     # Organize backtraces into groups that are identical up to this level
     dorder = Dict{Int,Vector{Int}}()
     for i = 1:length(bt)

@@ -1,11 +1,11 @@
 const snapsvgjs = joinpath(dirname(@__FILE__), "..", "templates", "snap.svg-min.js")
 const viewerjs = joinpath(dirname(@__FILE__), "viewer.js")
 
-function escape_script(js::String)
+function escape_script(js::AbstractString)
     return replace(js, "]]", "] ]")
 end
 
-function svgheader(f::IO, fig_id::String; width=1200, height=706, font="Verdana")
+function svgheader(f::IO, fig_id::AbstractString; width=1200, height=706, font="Verdana")
 
     y_msg = height - 17
     print(f, """<?xml version="1.0" standalone="no"?>
