@@ -21,7 +21,7 @@ using .PVTree
 include("svgwriter.jl")
 
 immutable TagData
-    ip::Uint
+    ip::UInt
     status::Int
 end
 const TAGNONE = TagData(@compat(UInt(0)), -1)
@@ -131,7 +131,7 @@ function prepare(data; C = false, lidict = nothing, colorgc = true, combine = tr
     img, lidict, imgtags
 end
 
-function svgwrite(filename::String, data, lidict; C = false, colorgc = true, fontsize = 12, combine = true)
+function svgwrite(filename::AbstractString, data, lidict; C = false, colorgc = true, fontsize = 12, combine = true)
     img, lidict, imgtags = prepare(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine)
     pd = ProfileData(img, lidict, imgtags, fontsize)
     open(filename, "w") do file
@@ -139,7 +139,7 @@ function svgwrite(filename::String, data, lidict; C = false, colorgc = true, fon
     end
     nothing
 end
-function svgwrite(filename::String; kwargs...)
+function svgwrite(filename::AbstractString; kwargs...)
     data, lidict = Profile.retrieve()
     svgwrite(filename, data, lidict; kwargs...)
 end
