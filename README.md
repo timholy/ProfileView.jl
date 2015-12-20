@@ -5,7 +5,7 @@
 This package contains tools for visualizing profiling data collected
 with [Julia's][Julia] built-in sampling
 [profiler](http://docs.julialang.org/en/latest/stdlib/profile/). It
-can be helpful for geting a big-picture overview of the major
+can be helpful for getting a big-picture overview of the major
 bottlenecks in your code, and optionally highlights lines that trigger
 garbage collection as potential candidates for optimization.
 
