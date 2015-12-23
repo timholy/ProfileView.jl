@@ -55,6 +55,11 @@ function __init__()
 end
 
 function prepare(data; C = false, lidict = nothing, colorgc = true, combine = true)
+    bt, uip, counts, lidict, lkup = prepare_data(data, lidict)
+    prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine)
+end
+
+function prepare_data(data, lidict)
     bt, counts = Profile.tree_aggregate(data)
     if isempty(counts)
         Profile.warning_empty()
@@ -67,7 +72,8 @@ function prepare(data; C = false, lidict = nothing, colorgc = true, combine = tr
     end
     bt = bt[keep]
     counts = counts[keep]
-    # Tk has trouble with very large images. If needed, pretend we took fewer samples.
+    # Display has trouble with very large images. If needed, pretend
+    # we took fewer samples.
     ncounts = sum(counts)
     if ncounts > 10^4
         counts = [floor(Int, c/(ncounts/10^4)) for c in counts]  # uniformly reduce the number of backtraces
@@ -80,13 +86,19 @@ function prepare(data; C = false, lidict = nothing, colorgc = true, combine = tr
     end
     # Do code address lookups on all unique instruction pointers
     uip = unique(vcat(bt...))
-    nuip = length(uip)
     if lidict == nothing
         lkup = [Profile.lookup(ip) for ip in uip]
         lidict = builddict(uip, lkup)
     else
         lkup = [lidict[ip] for ip in uip]
     end
+    bt, uip, counts, lidict, lkup
+end
+
+prepare_data(::Void, ::Void) = nothing, nothing, nothing, nothing, nothing
+
+function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine)
+    nuip = length(uip)
     isjl = builddict(uip, [!lkup[i].fromC for i = 1:nuip])
     isgc = builddict(uip, [lkup[i].func == "jl_gc_collect" for i = 1:nuip])
     isjl[@compat(UInt(0))] = false  # needed for root below
