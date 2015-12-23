@@ -33,10 +33,13 @@ type ProfileData
     fontsize
 end
 
-const bkg = colorant"black"
-const fontcolor = colorant"white"
+const bkg = colorant"white"
+const fontcolor = colorant"black"
 const gccolor = colorant"red"
-const colors = distinguishable_colors(13, [bkg,fontcolor,gccolor])[4:end]
+const colors = distinguishable_colors(13, [bkg,fontcolor,gccolor],
+                                      lchoices=Float64[65, 70, 75, 80],
+                                      cchoices=Float64[0, 50, 60, 70],
+                                      hchoices=linspace(0, 330, 24))[4:end]
 
 function __init__()
     push!(LOAD_PATH, splitdir(@__FILE__)[1])
