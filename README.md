@@ -52,14 +52,14 @@ If you're following along, you should see something like this:
 
 ![ProfileView](readme_images/pv1.jpg)
 
-This plot is a visual representation of the *call graph* of the code that you just profiled. The "root" of the tree is at the bottom; if you move your mouse over the long horizontal purple bar at the bottom, you'll see it's `_start` in `client.jl`. As is explained [elsewhere](http://docs.julialang.org/en/latest/stdlib/profile/), this is the first Julia function called in launching the REPL. If you move your mouse upwards, you'll see the nest of functions called by `_start`, including `run_repl`, `eval_user_input`, etc.
+This plot is a visual representation of the *call graph* of the code that you just profiled. The "root" of the tree is at the bottom; if you move your mouse over the long horizontal magenta bar at the bottom, you'll see it's an anonymous function in `REPL.jl`; the orangish one above that is `eval_user_input` in the same function. As is explained [elsewhere](http://docs.julialang.org/en/latest/stdlib/profile/), these are what run your code in the REPL. If you move your mouse upwards, you'll eventually get to the function(s) you ran with `@profile`.
 
 While the vertical axis therefore represents nesting depth, the
 horizontal axis represents the amount of time (more precisely, the
-number of backtraces) spent at each line.  One sees on the 6th line
+number of backtraces) spent at each line.  One sees on the 4th line
 from the bottom, there are several differently-colored bars, each
 corresponding to a different line of `profile_test`. The fact that
-they are all positioned on top of the lower purple bar means that all
+they are all positioned on top of the lower magenta bar means that all
 of these lines are called by the same "parent" function. Within a
 block of code, they are sorted in order of increasing line number, to
 make it easier for you to compare to the source code.
@@ -79,19 +79,10 @@ things about this function:
 
 - In this plot, red is a special color: it is reserved for function
   calls that trigger *garbage collection*, a time-consuming process
-  that often serves as a bottleneck.  Here one could see an example of
-  garbage-collection occuring inside `fftw.jl's fft()`, `fftw.jl's
-  Plan()`, and in the line `B = A[:,:,5]`.
-
-- You may notice some very narrow bars along the bottom at the left
-  edge of this plot. If you hover over them, you'll see that these
-  correspond to operations that are performed by your code, but whose
-  "parents" are not known.  These are the highly-offensive (well, to
-  the author) [truncated
-  backtraces](https://github.com/JuliaLang/julia/issues/3469). Whistle
-  a happy tune and pretend they aren't there (although of course they,
-  like all other operations, contribute to the total run-time of your
-  code).
+  that sometimes serves as a bottleneck or as a warning of
+  type-instability.  Here one could see one example of
+  garbage-collection occuring inside `fft`, and several inside
+  `mapslices`.
 
 Further discussion of the proper interpretation of the red bars can be
 found [below](#gcdetails).
@@ -112,6 +103,12 @@ found [below](#gcdetails).
 
 - To use the Gtk interface in IJulia, set `PROFILEVIEW_USEGTK = true` in
   the `Main` module before `using ProfileView`.
+
+- The toolbar at the top contains two icons to load and save profile
+  data, respectively.  Clicking the save icon will prompt you for a
+  filename.  Launching `ProfileView.view(nothing)` opens a blank
+  window; you can populate it with saved data by clicking on the
+  "open" icon.
 
 ### IJulia (SVG) Interface
 
@@ -148,24 +145,27 @@ Here is the meaning of the different arguments:
 
 - `combine` is explained [elsewhere](http://docs.julialang.org/en/latest/stdlib/profile/).
 
-### Saving profile data
+### Saving profile data manually
 
-You can save profile data for later viewing and analysis using the JLD file format.
+If you're using the Gtk backend, the easiest approach is to click on
+the "Save as" icon.
+
+From the REPL, you can save profile data for later viewing and analysis using the JLD file format.
 The main trick is that the backtrace data, on its own, is only valid within a particular
 julia session. To become portable, you have to save "line information" that looks
 up the particular line number in the source code corresponding to a particular
 machine instruction. Here's an example:
 
 ```julia
-bt, lidict = Profile.retrieve()
-using HDF5, JLD
-@save "/tmp/profdata.jld" bt lidict
+li, lidict = Profile.retrieve()
+using JLD
+@save "/tmp/foo.jlprof" li lidict
 ```
 Now open a new julia session, and try the following:
 ```
 using HDF5, JLD, ProfileView
 @load "/tmp/profdata.jld"
-ProfileView.view(bt, lidict=lidict)
+ProfileView.view(li, lidict=lidict)
 ```
 
 ### Saving ProfileView visualizations
