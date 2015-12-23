@@ -42,8 +42,8 @@ function view(data = Profile.fetch(); lidict=nothing, kwargs...)
     showall(win)
 end
 
-function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, fontsize = 12, combine = true)
-    img, lidict, imgtags = ProfileView.prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine)
+function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, fontsize = 12, combine = true, colorfun = (ip, lidict, irow, index, colorgc) -> ProfileView.default_colorfun(ip, lidict, irow, index, colorgc, ProfileView.colors, ProfileView.gccolor))
+    img, lidict, imgtags = ProfileView.prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine, colorfun)
     img24 = UInt32[convert(UInt32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
     surf = Cairo.CairoRGBSurface(img24)
     imw = size(img24,2)

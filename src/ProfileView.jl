@@ -46,20 +46,20 @@ function __init__()
     if isdefined(Main, :IJulia) && !isdefined(Main, :PROFILEVIEW_USEGTK)
         eval(Expr(:import, :ProfileViewSVG))
         @eval begin
-            view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true) = ProfileViewSVG.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine)
+            view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, colorfun = (ip, lidict, irow, index, colorgc) -> default_colorfun(ip, lidict, irow, index, colorgc, colors, gccolor)) = ProfileViewSVG.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, colorfun=colorfun)
         end
     else
         eval(Expr(:import, :ProfileViewGtk))
         @eval begin
-            view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true) = ProfileViewGtk.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine)
+            view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, colorfun = (ip, lidict, irow, index, colorgc) -> default_colorfun(ip, lidict, irow, index, colorgc, colors, gccolor)) = ProfileViewGtk.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, colorfun=colorfun)
         end
     end
     pop!(LOAD_PATH)
 end
 
-function prepare(data; C = false, lidict = nothing, colorgc = true, combine = true)
+function prepare(data; C = false, lidict = nothing, colorgc = true, combine = true, colorfun = (ip, lidict, irow, index, colorgc) -> default_colorfun(ip, lidict, irow, index, colorgc, colors, gccolor))
     bt, uip, counts, lidict, lkup = prepare_data(data, lidict)
-    prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine)
+    prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine, colorfun)
 end
 
 function prepare_data(data, lidict)
@@ -100,7 +100,7 @@ end
 
 prepare_data(::Void, ::Void) = nothing, nothing, nothing, nothing, nothing
 
-function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine)
+function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine, colorfun)
     nuip = length(uip)
     isjl = builddict(uip, [!lkup[i].fromC for i = 1:nuip])
     isgc = builddict(uip, [lkup[i].func == "jl_gc_collect" for i = 1:nuip])
@@ -142,7 +142,7 @@ function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine)
     rowtags = Any[fill(TAGNONE, w)]
     buildtags!(rowtags, root, 1)
     imgtags = hcat(rowtags...)
-    img = buildimg(imgtags, colors, bkg, gccolor, colorgc, combine, lidict)
+    img = buildimg(imgtags, lidict, colorfun, bkg, colorgc, combine)
     img, lidict, imgtags
 end
 
@@ -262,25 +262,22 @@ function buildtags!(rowtags, parent, level)
     end
 end
 
-function buildimg(imgtags, colors, bkg, gccolor, colorgc::Bool, combine::Bool, lidict)
+function buildimg(imgtags, lidict, colorfun, bkg, colorgc::Bool, combine::Bool)
     w = size(imgtags,1)
     h = size(imgtags,2)
     img = fill(bkg, w, h)
-    colorlen = round(Int, length(colors)/2)
     for j = 1:h
-        coloroffset = colorlen*iseven(j)
         colorindex = 1
         lasttag = TAGNONE
         status = 0
         first = 0
-        nextcolor = colors[coloroffset + colorindex]
         for i = 1:w
             t = imgtags[i,j]
             if t != TAGNONE
                 if t != lasttag && (lasttag == TAGNONE || !(combine && lidict[lasttag.ip] == lidict[t.ip]))
                     if first != 0
-                        colorindex = fillrow!(img, j, first:i-1, colorindex, colorlen, nextcolor, gccolor, status & colorgc)
-                        nextcolor = colors[coloroffset + colorindex]
+                        col, colorindex = colorfun(lasttag.ip, lidict, j, colorindex, status & colorgc)
+                        img[first:i-1,j] = col
                         status = t.status
                     end
                     first = i
@@ -291,8 +288,8 @@ function buildimg(imgtags, colors, bkg, gccolor, colorgc::Bool, combine::Bool, l
             else
                 if first != 0
                     # We transitioned from tag->none, render the previous range
-                    colorindex = fillrow!(img, j, first:i-1, colorindex, colorlen, nextcolor, gccolor, status & colorgc)
-                    nextcolor = colors[coloroffset + colorindex]
+                    col, colorindex = colorfun(lasttag.ip, lidict, j, colorindex, status & colorgc)
+                    img[first:i-1,j] = col
                     first = 0
                     lasttag = TAGNONE
                 end
@@ -300,20 +297,19 @@ function buildimg(imgtags, colors, bkg, gccolor, colorgc::Bool, combine::Bool, l
         end
         if first != 0
             # We got to the end of a row, render the previous range
-            fillrow!(img, j, first:w, colorindex, colorlen, nextcolor, gccolor, status & colorgc)
+            col, colorindex = colorfun(lasttag.ip, lidict, j, colorindex, status & colorgc)
+            img[first:w,j] = col
         end
     end
     img
 end
 
-function fillrow!(img, j, rng::UnitRange{Int}, colorindex, colorlen, regcolor, gccolor, status)
-    if status > 0
-        img[rng,j] = gccolor
-        return colorindex
-    else
-        img[rng,j] = regcolor
-        return mod1(colorindex+1, colorlen)
+function default_colorfun(ip, lidict, irow, index, colorgc, colors, gccolor)
+    if colorgc > 0
+        return gccolor, index
     end
+    n = length(colors)>>1
+    colors[iseven(irow)*n+index], mod1(index+1, n)
 end
 
 #### Debugging code

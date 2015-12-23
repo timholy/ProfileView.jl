@@ -122,7 +122,7 @@ found [below](#gcdetails).
 
 The `view` command has the following syntax:
 ```
-function view(data = Profile.fetch(); lidict = nothing, C = false, colorgc = true, fontsize = 12, combine = true)
+function view(data = Profile.fetch(); lidict = nothing, C = false, colorgc = true, fontsize = 12, combine = true, colorfun = default_colorfun)
 ```
 Here is the meaning of the different arguments:
 
@@ -144,6 +144,30 @@ Here is the meaning of the different arguments:
 - `fontsize` controls the size of the font displayed as a tooltip.
 
 - `combine` is explained [elsewhere](http://docs.julialang.org/en/latest/stdlib/profile/).
+
+- `colorfun` is a function `colorfun(ip, lidict, irow, index, status)
+  -> (color, nextindex)` that returns an RGB color and a counter
+  `nextindex`:
+
+  * `ip` is the instruction pointer, whose "meaning" can be looked up
+    as `lidict[ip]`.
+  *  `irow` is the row index, counting upward from the base.
+  * `index` is a counter for your use in your custom color function:
+    most commonly, it can be used to cycle among members of a list of
+    colors, and in this application the returned `nextindex` should
+    correspond to the value of `index` you'd like to receive on the
+    next call.
+  * `status` is a bitfield; currently its only role is to test whether
+    a line triggers garbage collection (with `status > 0`).
+
+
+As an example of the use of a custom colorization function,
+
+```jl
+ProfileView.view(;colorfun=(ip, lidict, irow, index, isgc)->isgc > 0 ? (colorant"red", index) : (colorant"green", index))
+```
+would color all bars green except those triggering garbage collection.
+
 
 ### Saving profile data manually
 
