@@ -1,6 +1,7 @@
-julia 0.4-
+julia 0.4
 Gtk
 GtkUtilities
 Cairo 0.2.5
 Colors
 Graphics 0.1
+FileIO

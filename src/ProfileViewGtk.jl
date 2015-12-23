@@ -2,7 +2,7 @@ VERSION >= v"0.4.0-dev+6521" && __precompile__()
 
 module ProfileViewGtk
 
-using Gtk.ShortNames, GtkUtilities, Colors
+using Gtk.ShortNames, GtkUtilities, Colors, FileIO
 import Cairo
 if VERSION < v"0.4.0-dev+3275"
     using Base.Graphics
@@ -19,16 +19,35 @@ function __init__()
     eval(Expr(:import, :ProfileView))
 end
 
-function view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true)
-    img, lidict, imgtags = ProfileView.prepare(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine)
+function view(data = Profile.fetch(); lidict=nothing, kwargs...)
+    bt, uip, counts, lidict, lkup = ProfileView.prepare_data(data, lidict)
+    # Display in a window
+    c = @Canvas()
+    setproperty!(c, :expand, true)
+    f = @Frame(c)
+    tb = @Toolbar()
+    bx = @Box(:v)
+    push!(bx, tb)
+    push!(bx, f)
+    tb_open = @ToolButton("gtk-open")
+    tb_save_as = @ToolButton("gtk-save-as")
+    push!(tb, tb_open)
+    push!(tb, tb_save_as)
+    signal_connect(open_cb, tb_open, "clicked", Void, (), false, (c,kwargs))
+    signal_connect(save_as_cb, tb_save_as, "clicked", Void, (), false, (c,data,lidict,kwargs))
+    win = @Window(bx, "Profile")
+    if data != nothing && !isempty(data)
+        viewprof(c, bt, uip, counts, lidict, lkup; kwargs...)
+    end
+    showall(win)
+end
+
+function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, fontsize = 12, combine = true)
+    img, lidict, imgtags = ProfileView.prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine)
     img24 = UInt32[convert(UInt32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
     surf = Cairo.CairoRGBSurface(img24)
     imw = size(img24,2)
     imh = size(img24,1)
-    # Display in a window
-    c = @Canvas()
-    f = @Frame(c)
-    win = @Window(f, "Profile")
     panzoom(c, (0,imw), (0,imh))
     panzoom_mouse(c)
     panzoom_key(c)
@@ -94,7 +113,24 @@ function view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = tru
             println(li.file, ", ", li.func, ": line ", li.line)
         end
     end
-    showall(win)
+    nothing
+end
+
+function open_cb(::Ptr, settings::Tuple)
+    c, kwargs = settings
+    selection = open_dialog("Load profile data", toplevel(c), ("*.jlprof","*"))
+    isempty(selection) && return nothing
+    data, lidict = load(File(format"JLD", selection), "li", "lidict")
+    bt, uip, counts, lidict, lkup = ProfileView.prepare_data(data, lidict)
+    viewprof(c, bt, uip, counts, lidict, lkup; kwargs...)
+    nothing
+end
+
+function save_as_cb(::Ptr, profdata::Tuple)
+    c, data, lidict = profdata
+    selection = save_dialog("Save profile data as JLD file", toplevel(c), ("*.jlprof",))
+    isempty(selection) && return nothing
+    FileIO.save(File(format"JLD", selection), "li", data, "lidict", lidict)
     nothing
 end
 
