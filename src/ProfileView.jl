@@ -102,7 +102,11 @@ prepare_data(::Void, ::Void) = nothing, nothing, nothing, nothing, nothing
 
 function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine)
     nuip = length(uip)
-    isjl = builddict(uip, [!lkup[i].fromC for i = 1:nuip])
+    if VERSION < v"0.5.0-dev+2420"
+        isjl = builddict(uip, [!lkup[i].fromC for i = 1:nuip])
+    else
+        isjl = builddict(uip, [!lkup[i].from_c for i = 1:nuip])
+    end
     isgc = builddict(uip, [lkup[i].func == "jl_gc_collect" for i = 1:nuip])
     isjl[@compat(UInt(0))] = false  # needed for root below
     isgc[@compat(UInt(0))] = false
