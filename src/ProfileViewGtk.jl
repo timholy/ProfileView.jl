@@ -72,7 +72,7 @@ function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, f
         tag = gettag(xu, yu)
         if tag != ProfileView.TAGNONE
             li = lidict[tag.ip]
-            str = string(basename(li.file), ", ", li.func, ": line ", li.line)
+            str = string(basename(string(li.file)), ", ", li.func, ": line ", li.line)
             set_source(ctx, ProfileView.fontcolor)
             Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
             lasttextbb = deform(Cairo.text(ctx, xu, yu, str, halign = xd < w/3 ? "left" : xd < 2w/3 ? "center" : "right"), -2, 2, -2, 2)
