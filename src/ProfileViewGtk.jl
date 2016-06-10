@@ -72,7 +72,14 @@ function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, f
         tag = gettag(xu, yu)
         if tag != ProfileView.TAGNONE
             li = lidict[tag.ip]
-            str = string(basename(string(li.file)), ", ", li.func, ": line ", li.line)
+            if VERSION < v"0.5.0-dev+4192"
+                str = string(basename(string(li.file)), ", ", li.func, ": line ", li.line)
+            else
+                str = ""
+                for l in li
+                    str = string(str, string(basename(string(l.file)), ", ", l.func, ": line ", l.line), "; ")
+                end
+            end
             set_source(ctx, ProfileView.fontcolor)
             Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
             lasttextbb = deform(Cairo.text(ctx, xu, yu, str, halign = xd < w/3 ? "left" : xd < 2w/3 ? "center" : "right"), -2, 2, -2, 2)
@@ -110,7 +117,19 @@ function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, f
         tag = gettag(xu, yu)
         if tag != ProfileView.TAGNONE
             li = lidict[tag.ip]
-            println(li.file, ", ", li.func, ": line ", li.line)
+            if VERSION < v"0.5.0-dev+4192"
+                println(li.file, ", ", li.func, ": line ", li.line)
+            else
+                firstline = true
+                for l in li
+                    if !firstline
+                        print("  ")
+                    else
+                        firstline = false
+                    end
+                    println(l.file, ", ", l.func, ": line ", l.line)
+                end
+            end
         end
     end
     nothing

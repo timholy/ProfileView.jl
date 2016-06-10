@@ -90,7 +90,11 @@ function prepare_data(data, lidict)
     # Do code address lookups on all unique instruction pointers
     uip = unique(vcat(bt...))
     if lidict == nothing
-        lkup = [Profile.lookup(ip) for ip in uip]
+        if VERSION < v"0.5.0-dev+4192"
+            lkup = [Profile.lookup(ip) for ip in uip]
+        else
+            lkup = Vector{StackFrame}[Profile.lookup(ip) for ip in uip]
+        end
         lidict = builddict(uip, lkup)
     else
         lkup = [lidict[ip] for ip in uip]
@@ -104,13 +108,23 @@ function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine)
     nuip = length(uip)
     if VERSION < v"0.5.0-dev+2420"
         isjl = builddict(uip, [!lkup[i].fromC for i = 1:nuip])
-    else
+    elseif VERSION < v"0.5.0-dev+4192"
         isjl = builddict(uip, [!lkup[i].from_c for i = 1:nuip])
+    else
+        isjl = builddict(uip, [all(x->!x.from_c, l) for l in lkup])
     end
-    isgc = builddict(uip, [lkup[i].func == "jl_gc_collect" for i = 1:nuip])
+    if VERSION < v"0.5.0-dev+4192"
+        isgc = builddict(uip, [lkup[i].func == "jl_gc_collect" for i = 1:nuip])
+    else
+        isgc = builddict(uip, [any(x->x.func == "jl_gc_collect", l) for l in lkup])
+    end
     isjl[@compat(UInt(0))] = false  # needed for root below
     isgc[@compat(UInt(0))] = false
-    p = Profile.liperm(lkup)
+    if VERSION < v"0.5.0-dev+4192"
+        p = Profile.liperm(lkup)
+    else
+        p = Profile.liperm(map(first, lkup))
+    end
     rank = similar(p)
     rank[p] = 1:length(p)
     ip2so = builddict(uip, rank)
