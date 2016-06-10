@@ -3,8 +3,10 @@ os:
   - linux
 julia:
   - 0.4
+  - nightly
 notifications:
   email: false
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - xvfb-run julia --check-bounds=yes -e 'Pkg.clone(pwd()); Pkg.build("ProfileView"); Pkg.test("ProfileView"; coverage=true)'
+  - julia -e 'Pkg.clone(pwd()); Pkg.build("ProfileView")'
+  - xvfb-run julia --check-bounds=yes -e 'Pkg.test("ProfileView"; coverage=true)'
