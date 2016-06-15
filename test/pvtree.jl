@@ -39,7 +39,7 @@ end
 # Run it with C == false
 root = buildraw()
 PVTree.setstatus!(root, isgc)
-PVTree.prunegraph!(root, isjl, (), (), ())
+PVTree.prunegraph!(root, isjl, (), (), (), [])
 
 @assert root.data.status == 1
 c = root.child

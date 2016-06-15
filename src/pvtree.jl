@@ -91,9 +91,13 @@ function setstatus!(parent::Node, isgc::Dict)
 end
 
 # The last three inputs are just for debugging
-function prunegraph!(parent::Node, isjl::Dict, lidict, ip2so, counts)
+function prunegraph!(parent::Node, isjl::Dict, lidict, ip2so, counts,
+                     pruned_set)
     if parent.data.ip != 0 && !isempty(counts)
         counts[ip2so[parent.data.ip]] += 1
+    end
+    if parent.data.ip != 0 && parent.data.ip in pruned_set
+        parent.child = parent
     end
     c = parent.child
     if parent == c
@@ -103,7 +107,7 @@ function prunegraph!(parent::Node, isjl::Dict, lidict, ip2so, counts)
     lastc = c
     isfirst = true
     while true
-        prunegraph!(c, isjl, lidict, ip2so, counts)
+        prunegraph!(c, isjl, lidict, ip2so, counts, pruned_set)
         if !isjl[c.data.ip]
             parent.data.status |= c.data.status
             if !isleaf(c)

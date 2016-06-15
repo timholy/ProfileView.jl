@@ -122,7 +122,7 @@ found [below](#gcdetails).
 
 The `view` command has the following syntax:
 ```
-function view(data = Profile.fetch(); lidict = nothing, C = false, colorgc = true, fontsize = 12, combine = true)
+function view(data = Profile.fetch(); lidict = nothing, C = false, colorgc = true, fontsize = 12, combine = true, pruned = [])
 ```
 Here is the meaning of the different arguments:
 
@@ -144,6 +144,8 @@ Here is the meaning of the different arguments:
 - `fontsize` controls the size of the font displayed as a tooltip.
 
 - `combine` is explained [elsewhere](http://docs.julialang.org/en/latest/stdlib/profile/).
+
+- `pruned` is a list of functions (see example) whose call tree will not be displayed. This is useful to control the output of very deep (or recursive) functions. Example: `pruned = [("sort!", "sort.jl"), ("some_function_name", "some_filename.jl")]`
 
 ### Saving profile data manually
 
