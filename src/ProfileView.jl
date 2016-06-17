@@ -145,11 +145,7 @@ function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine,
     counts = zeros(Int, length(uip))
     if !C
         pruned_ips = Set()
-        for (ip, li) in lidict
-            if (li.func, basename(li.file)) in pruned
-                push!(pruned_ips, ip)
-            end
-        end
+        pushpruned!(pruned_ips, pruned, lidict)
         PVTree.prunegraph!(root, isjl, lidict, ip2so, counts, pruned_ips)
     end
 #     for ip in uip
@@ -407,6 +403,27 @@ function checkprunedgc(parent::Node, tf::Bool)
         end
     end
     tf
+end
+
+if VERSION < v"0.5.0-dev+4192"
+    function pushpruned!(pruned_ips, pruned, lidict)
+        for (ip, li) in lidict
+            if (li.func, basename(string(li.file))) in pruned
+                push!(pruned_ips, ip)
+            end
+        end
+    end
+else
+    function pushpruned!(pruned_ips, pruned, lidict)
+        for (ip, liv) in lidict
+            for li in liv
+                if (li.func, basename(string(li.file))) in pruned
+                    push!(pruned_ips, ip)
+                    break
+                end
+            end
+        end
+    end
 end
 
 end
