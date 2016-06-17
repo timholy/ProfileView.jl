@@ -5,7 +5,8 @@ module ProfileView
 using Colors
 using Compat
 
-import Base: contains, isequal, show, mimewritable, writemime
+import Base: contains, isequal, show, mimewritable
+@compat import Base.show
 
 if VERSION < v"0.4.0-dev+980"
     builddict(a, b) = Dict(a,b)
@@ -171,7 +172,7 @@ function svgwrite(filename::AbstractString, data, lidict; C = false, colorgc = t
     img, lidict, imgtags = prepare(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine, pruned=pruned)
     pd = ProfileData(img, lidict, imgtags, fontsize)
     open(filename, "w") do file
-        writemime(file, "image/svg+xml", pd)
+        @compat show(file, "image/svg+xml", pd)
     end
     nothing
 end
@@ -183,7 +184,7 @@ end
 
 mimewritable(::MIME"image/svg+xml", pd::ProfileData) = true
 
-function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
+@compat function show(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
 
     img = pd.img
     lidict = pd.lidict
