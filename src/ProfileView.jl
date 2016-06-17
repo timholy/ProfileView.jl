@@ -46,20 +46,20 @@ function __init__()
     if isdefined(Main, :IJulia) && !isdefined(Main, :PROFILEVIEW_USEGTK)
         eval(Expr(:import, :ProfileViewSVG))
         @eval begin
-            view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true) = ProfileViewSVG.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine)
+            view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, pruned = []) = ProfileViewSVG.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, pruned=pruned)
         end
     else
         eval(Expr(:import, :ProfileViewGtk))
         @eval begin
-            view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true) = ProfileViewGtk.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine)
+            view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, pruned = []) = ProfileViewGtk.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, pruned=pruned)
         end
     end
     pop!(LOAD_PATH)
 end
 
-function prepare(data; C = false, lidict = nothing, colorgc = true, combine = true)
+function prepare(data; C = false, lidict = nothing, colorgc = true, combine = true, pruned = [])
     bt, uip, counts, lidict, lkup = prepare_data(data, lidict)
-    prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine)
+    prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine, pruned)
 end
 
 function prepare_data(data, lidict)
@@ -104,7 +104,8 @@ end
 
 prepare_data(::Void, ::Void) = nothing, nothing, nothing, nothing, nothing
 
-function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine)
+function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine,
+                       pruned)
     nuip = length(uip)
     if VERSION < v"0.5.0-dev+2420"
         isjl = builddict(uip, [!lkup[i].fromC for i = 1:nuip])
@@ -143,7 +144,13 @@ function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine)
 #     checkstatus(root, isgc, isjl, C, lidict)
     counts = zeros(Int, length(uip))
     if !C
-        PVTree.prunegraph!(root, isjl, lidict, ip2so, counts)
+        pruned_ips = Set()
+        for (ip, li) in lidict
+            if (li.func, basename(li.file)) in pruned
+                push!(pruned_ips, ip)
+            end
+        end
+        PVTree.prunegraph!(root, isjl, lidict, ip2so, counts, pruned_ips)
     end
 #     for ip in uip
 #         println(counts[ip2so[ip]], ": ", lidict[ip])
@@ -164,8 +171,8 @@ function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine)
     img, lidict, imgtags
 end
 
-function svgwrite(filename::AbstractString, data, lidict; C = false, colorgc = true, fontsize = 12, combine = true)
-    img, lidict, imgtags = prepare(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine)
+function svgwrite(filename::AbstractString, data, lidict; C = false, colorgc = true, fontsize = 12, combine = true, pruned = [])
+    img, lidict, imgtags = prepare(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine, pruned=pruned)
     pd = ProfileData(img, lidict, imgtags, fontsize)
     open(filename, "w") do file
         writemime(file, "image/svg+xml", pd)
