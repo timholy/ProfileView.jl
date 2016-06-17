@@ -5,7 +5,8 @@ module ProfileView
 using Colors
 using Compat
 
-import Base: contains, isequal, show, mimewritable, writemime
+import Base: contains, isequal, show, mimewritable
+@compat import Base.show
 
 if VERSION < v"0.4.0-dev+980"
     builddict(a, b) = Dict(a,b)
@@ -145,11 +146,7 @@ function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine,
     counts = zeros(Int, length(uip))
     if !C
         pruned_ips = Set()
-        for (ip, li) in lidict
-            if (li.func, basename(li.file)) in pruned
-                push!(pruned_ips, ip)
-            end
-        end
+        pushpruned!(pruned_ips, pruned, lidict)
         PVTree.prunegraph!(root, isjl, lidict, ip2so, counts, pruned_ips)
     end
 #     for ip in uip
@@ -175,7 +172,7 @@ function svgwrite(filename::AbstractString, data, lidict; C = false, colorgc = t
     img, lidict, imgtags = prepare(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine, pruned=pruned)
     pd = ProfileData(img, lidict, imgtags, fontsize)
     open(filename, "w") do file
-        writemime(file, "image/svg+xml", pd)
+        @compat show(file, "image/svg+xml", pd)
     end
     nothing
 end
@@ -187,7 +184,7 @@ end
 
 mimewritable(::MIME"image/svg+xml", pd::ProfileData) = true
 
-function writemime(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
+@compat function show(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
 
     img = pd.img
     lidict = pd.lidict
@@ -407,6 +404,27 @@ function checkprunedgc(parent::Node, tf::Bool)
         end
     end
     tf
+end
+
+if VERSION < v"0.5.0-dev+4192"
+    function pushpruned!(pruned_ips, pruned, lidict)
+        for (ip, li) in lidict
+            if (li.func, basename(string(li.file))) in pruned
+                push!(pruned_ips, ip)
+            end
+        end
+    end
+else
+    function pushpruned!(pruned_ips, pruned, lidict)
+        for (ip, liv) in lidict
+            for li in liv
+                if (li.func, basename(string(li.file))) in pruned
+                    push!(pruned_ips, ip)
+                    break
+                end
+            end
+        end
+    end
 end
 
 end
