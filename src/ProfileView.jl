@@ -210,9 +210,18 @@ mimewritable(::MIME"image/svg+xml", pd::ProfileData) = true
     function printrec(f, samples, xstart, xend, y, tag, rgb)
         width = xend - xstart
         li = lidict[tag.ip]
-        info = "$(li.func) in $(li.file):$(li.line)"
+        info = if VERSION < v"0.5.0-dev+4192"
+            "$(li.func) in $(li.file):$(li.line)"
+        else
+            join(["$(l.func) in $(l.file):$(l.line)" for l in li], "; ")
+        end
+        shortinfo = if VERSION < v"0.5.0-dev+4192"
+            info
+        else
+            join(["$(l.func) in $(basename(string(l.file))):$(l.line)" for l in li], "; ")
+        end
         info = eschtml(info)
-        shortinfo = info
+        shortinfo = eschtml(shortinfo)
         #if avgcharwidth*3 > width
         #    shortinfo = ""
         #elseif length(shortinfo) * avgcharwidth > width

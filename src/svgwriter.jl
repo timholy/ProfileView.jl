@@ -37,9 +37,9 @@ end
 function svgfinish(f::IO, fig_id)
     print(f, """
         </g></g>
-        <script><![CDATA[$(escape_script(readall(snapsvgjs)))]]></script>
+        <script><![CDATA[$(escape_script(readstring(snapsvgjs)))]]></script>
         <script><![CDATA[
-            $(escape_script(readall(viewerjs)))
+            $(escape_script(readstring(viewerjs)))
             (function (glob, factory) {
                 if (typeof require === "function" && typeof define === "function" && define.amd) {
                     require(["Snap.svg", "ProfileView"], function (Snap, ProfileView) {
