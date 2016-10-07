@@ -3,6 +3,7 @@ os:
   - linux
 julia:
   - 0.4
+  - 0.5
   - nightly
 notifications:
   email: false
@@ -10,3 +11,6 @@ script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
   - julia -e 'Pkg.clone(pwd()); Pkg.build("ProfileView")'
   - xvfb-run julia --check-bounds=yes -e 'Pkg.test("ProfileView"; coverage=true)'
+after_success:
+  # push coverage results to Codecov
+  - julia -e 'cd(Pkg.dir("ProfileView")); Pkg.add("Coverage"); using Coverage; Codecov.submit(Codecov.process_folder())'
