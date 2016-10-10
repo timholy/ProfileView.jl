@@ -44,7 +44,7 @@ end
 
 function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, fontsize = 12, combine = true, pruned=[])
     img, lidict, imgtags = ProfileView.prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine, pruned)
-    img24 = UInt32[convert(UInt32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
+    img24 = UInt32[reinterpret(UInt32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
     surf = Cairo.CairoRGBSurface(img24)
     imw = size(img24,2)
     imh = size(img24,1)
