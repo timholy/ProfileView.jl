@@ -1,14 +1,10 @@
-VERSION >= v"0.4.0-dev+6521" && __precompile__()
+__precompile__()
 
 module ProfileViewGtk
 
-using Gtk.ShortNames, GtkUtilities, Colors, FileIO
+using Gtk.ShortNames, GtkReactive, Colors, FileIO, IntervalSets
 import Cairo
-if VERSION < v"0.4.0-dev+3275"
-    using Base.Graphics
-else
-    using Graphics
-end
+using Graphics
 
 type ZoomCanvas
     bb::BoundingBox  # in user-coordinates
@@ -22,87 +18,86 @@ end
 function view(data = Profile.fetch(); lidict=nothing, kwargs...)
     bt, uip, counts, lidict, lkup = ProfileView.prepare_data(data, lidict)
     # Display in a window
-    c = @Canvas()
-    setproperty!(c, :expand, true)
-    f = @Frame(c)
-    tb = @Toolbar()
-    bx = @Box(:v)
+    c = canvas(UserUnit)
+    setproperty!(widget(c), :expand, true)
+    f = Frame(c)
+    tb = Toolbar()
+    bx = Box(:v)
     push!(bx, tb)
     push!(bx, f)
-    tb_open = @ToolButton("gtk-open")
-    tb_save_as = @ToolButton("gtk-save-as")
+    tb_open = ToolButton("gtk-open")
+    tb_save_as = ToolButton("gtk-save-as")
     push!(tb, tb_open)
     push!(tb, tb_save_as)
-    signal_connect(open_cb, tb_open, "clicked", Void, (), false, (c,kwargs))
-    signal_connect(save_as_cb, tb_save_as, "clicked", Void, (), false, (c,data,lidict,kwargs))
-    win = @Window(bx, "Profile")
+    signal_connect(open_cb, tb_open, "clicked", Void, (), false, (widget(c),kwargs))
+    signal_connect(save_as_cb, tb_save_as, "clicked", Void, (), false, (widget(c),data,lidict,kwargs))
+    win = Window(bx, "Profile")
     if data != nothing && !isempty(data)
         viewprof(c, bt, uip, counts, lidict, lkup; kwargs...)
     end
+    GtkReactive.gc_preserve(win, c)
     showall(win)
 end
 
 function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, fontsize = 12, combine = true, pruned=[])
     img, lidict, imgtags = ProfileView.prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine, pruned)
     img24 = UInt32[reinterpret(UInt32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
+    fv = XY(0.0..size(img24,2), 0.0..size(img24,1))
+    zr = Signal(ZoomRegion(fv, fv))
+    sigrb = init_zoom_rubberband(c, zr)
+    sigpd = init_pan_drag(c, zr)
+    sigzs = init_zoom_scroll(c, zr)
+    sigps = init_pan_scroll(c, zr)
     surf = Cairo.CairoRGBSurface(img24)
-    imw = size(img24,2)
-    imh = size(img24,1)
-    panzoom(c, (0,imw), (0,imh))
-    panzoom_mouse(c)
-    panzoom_key(c)
-    lasttextbb = BoundingBox(1,0,1,0)
-    standard_motion = function (c, event)
-        # Repair image from ovewritten text
-        ctx = getgc(c)
-        w = width(c)
-        if width(lasttextbb) > 0
-            h = height(c)
-            xview, yview = guidata[c, :xview], guidata[c, :yview]
-            set_coords(ctx, xview, yview)
-            rectangle(ctx, lasttextbb)
-            set_source(ctx, surf)
-            p = Cairo.get_source(ctx)
-            Cairo.pattern_set_filter(p, Cairo.FILTER_NEAREST)
-            fill(ctx)
-        end
-        # Write the info
-        xd, yd = event.x, event.y
-        xu, yu = device_to_user(ctx, xd, yd)
-        tag = gettag(xu, yu)
-        if tag != ProfileView.TAGNONE
-            li = lidict[tag.ip]
-            if VERSION < v"0.5.0-dev+4192"
-                str = string(basename(string(li.file)), ", ", li.func, ": line ", li.line)
-            else
-                str = ""
-                for l in li
-                    str = string(str, string(basename(string(l.file)), ", ", l.func, ": line ", l.line), "; ")
-                end
-            end
-            set_source(ctx, ProfileView.fontcolor)
-            Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
-            lasttextbb = deform(Cairo.text(ctx, xu, yu, str, halign = xd < w/3 ? "left" : xd < 2w/3 ? "center" : "right"), -2, 2, -2, 2)
-        end
-        reveal(c)
-    end
-    c.mouse.motion = standard_motion
-    draw(c) do widget
+    sigredraw = draw(c, zr) do widget, r
         ctx = getgc(widget)
-        w = width(widget)
-        h = height(widget)
-        xview, yview = guidata[c, :xview], guidata[c, :yview]
-        set_coords(ctx, xview, yview)
-        rectangle(ctx, xview.min, yview.min, width(xview), width(yview))
+        set_coords(ctx, r)
+        rectangle(ctx, BoundingBox(r.currentview))
         set_source(ctx, surf)
         p = Cairo.get_source(ctx)
         Cairo.pattern_set_filter(p, Cairo.FILTER_NEAREST)
         fill(ctx)
     end
+    lasttextbb = BoundingBox(1,0,1,0)
+    sigmotion = map(c.mouse.motion) do btn
+        # Repair image from ovewritten text
+        if c.widget.is_realized && c.widget.is_sized
+            ctx = getgc(c)
+            if Graphics.width(lasttextbb) > 0
+                r = value(zr)
+                set_coords(ctx, r)
+                rectangle(ctx, lasttextbb)
+                set_source(ctx, surf)
+                p = Cairo.get_source(ctx)
+                Cairo.pattern_set_filter(p, Cairo.FILTER_NEAREST)
+                fill(ctx)
+            end
+            # Write the info
+            xu, yu = btn.position.x, btn.position.y
+            tag = gettag(xu, yu)
+            if tag != ProfileView.TAGNONE
+                li = lidict[tag.ip]
+                if VERSION < v"0.5.0-dev+4192"
+                    str = string(basename(string(li.file)), ", ", li.func, ": line ", li.line)
+                else
+                    str = ""
+                    for l in li
+                        str = string(str, string(basename(string(l.file)), ", ", l.func, ": line ", l.line), "; ")
+                    end
+                end
+                set_source(ctx, ProfileView.fontcolor)
+                Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
+                xi = value(zr).currentview.x
+                xmin, xmax = minimum(xi), maximum(xi)
+                lasttextbb = deform(Cairo.text(ctx, xu, yu, str, halign = xu < (2xmin+xmax)/3 ? "left" : xu < (xmin+2xmax)/3 ? "center" : "right"), -2, 2, -2, 2)
+            end
+            reveal(c)
+        end
+    end
     # From a given position, find the underlying tag
     function gettag(xu, yu)
-        x = ceil(Int, xu)
-        y = ceil(Int, yu)
+        x = ceil(Int, Float64(xu))
+        y = ceil(Int, Float64(yu))
         Y = size(imgtags, 2)
         x = max(1, min(x, size(imgtags, 1)))
         y = max(1, min(y, Y))
@@ -110,28 +105,30 @@ function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, f
     end
     # Hover over a block and see the source line
     # Right-click prints the full path, function, and line to the console
-    c.mouse.button3press = function (c, event)
-        ctx = getgc(c)
-        xd, yd = event.x, event.y
-        xu, yu = device_to_user(ctx, xd, yd)
-        tag = gettag(xu, yu)
-        if tag != ProfileView.TAGNONE
-            li = lidict[tag.ip]
-            if VERSION < v"0.5.0-dev+4192"
-                println(li.file, ", ", li.func, ": line ", li.line)
-            else
-                firstline = true
-                for l in li
-                    if !firstline
-                        print("  ")
-                    else
-                        firstline = false
+    sigshow = map(c.mouse.buttonpress) do btn
+        if btn.button == 3
+            ctx = getgc(c)
+            xu, yu = btn.position.x, btn.position.y
+            tag = gettag(xu, yu)
+            if tag != ProfileView.TAGNONE
+                li = lidict[tag.ip]
+                if VERSION < v"0.5.0-dev+4192"
+                    println(li.file, ", ", li.func, ": line ", li.line)
+                else
+                    firstline = true
+                    for l in li
+                        if !firstline
+                            print("  ")
+                        else
+                            firstline = false
+                        end
+                        println(l.file, ", ", l.func, ": line ", l.line)
                     end
-                    println(l.file, ", ", l.func, ": line ", l.line)
                 end
             end
         end
     end
+    append!(c.preserved, [sigrb, sigpd, sigzs, sigps, sigredraw, sigmotion, sigshow])
     nothing
 end
 

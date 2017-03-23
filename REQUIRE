@@ -1,6 +1,6 @@
 julia 0.5
 Gtk
-GtkUtilities
+GtkReactive 0.0.3
 Cairo 0.2.5
 Colors
 Graphics 0.1
