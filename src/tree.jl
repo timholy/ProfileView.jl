@@ -23,16 +23,16 @@ type Node{T}
     sibling::Node{T}
     
     # Constructor for the root of the tree
-    function Node(data::T)
-        n = new(data)
+    function (::Type{Node{T}}){T}(data::T)
+        n = new{T}(data)
         n.parent = n
         n.child = n
         n.sibling = n
         n
     end
     # Constructor for all others
-    function Node(data::T, parent::Node)
-        n = new(data, parent)
+    function (::Type{Node{T}}){T}(data::T, parent::Node)
+        n = new{T}(data, parent)
         n.child = n
         n.sibling = n
         n
