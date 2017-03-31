@@ -4,17 +4,23 @@
 
 # NEWS
 
-ProfileView has switched from
-[GtkUtilities](https://github.com/timholy/GtkUtilities.jl) to
-[GtkReactive](https://github.com/JuliaGizmos/GtkReactive.jl).  One
-consequence is that you now need to hold down Ctrl for any zoom
-operation.  You can now shift the displayed region by click-dragging
-on the image.
+Version 0.2 of ProfileView has several major changes:
 
-Red highlighting has been restored; it now highlights
-type-instabilities, not garbage collection, as a means to better
-distinguish "legitimate" uses of allocation from ones that might be
-avoidable.
+- Red highlighting has been restored; it now highlights
+  type-instabilities, not garbage collection, as a means to better
+  distinguish legitimate uses of allocation from ones that might be
+  avoidable.
+
+- For users of the Gtk version, ProfileView has switched from
+  [GtkUtilities](https://github.com/timholy/GtkUtilities.jl) to
+  [GtkReactive](https://github.com/JuliaGizmos/GtkReactive.jl).  One
+  consequence is that you now need to hold down Ctrl for any zoom
+  operation.  You can now shift the displayed region by click-dragging
+  on the image.
+
+- Also for users of the Gtk version, Ctrl-q and Ctrl-w close the
+  window. You can also use `ProfileView.closeall()` to close all
+  windows opened by ProfileView.
 
 # Introduction
 

@@ -46,6 +46,13 @@ function __init__()
         eval(Expr(:import, :ProfileViewGtk))
         @eval begin
             view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, pruned = []) = ProfileViewGtk.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, pruned=pruned)
+
+            closeall() = ProfileViewGtk.closeall()
+            @doc """
+    closeall()
+
+Closes all windows opened by ProfileView.
+""" -> closeall
         end
     end
     pop!(LOAD_PATH)
