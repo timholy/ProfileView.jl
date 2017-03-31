@@ -51,7 +51,7 @@ function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, f
     surf = Cairo.CairoRGBSurface(img24)
     sigredraw = draw(c, zr) do widget, r
         ctx = getgc(widget)
-        set_coords(ctx, r)
+        set_coordinates(ctx, r)
         rectangle(ctx, BoundingBox(r.currentview))
         set_source(ctx, surf)
         p = Cairo.get_source(ctx)
@@ -65,7 +65,7 @@ function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, f
             ctx = getgc(c)
             if Graphics.width(lasttextbb) > 0
                 r = value(zr)
-                set_coords(ctx, r)
+                set_coordinates(ctx, r)
                 rectangle(ctx, lasttextbb)
                 set_source(ctx, surf)
                 p = Cairo.get_source(ctx)

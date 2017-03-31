@@ -3,6 +3,6 @@ Gtk
 GtkReactive 0.0.3
 Cairo 0.2.5
 Colors
-Graphics 0.1
+Graphics 0.2
 FileIO
 Compat 0.8.0
