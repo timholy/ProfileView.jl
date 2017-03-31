@@ -2,6 +2,17 @@
 
 [![Build Status](https://travis-ci.org/timholy/ProfileView.jl.svg)](https://travis-ci.org/timholy/ProfileView.jl)
 
+# NEWS for users of the Gtk version
+
+ProfileView has switched from
+[GtkUtilities](https://github.com/timholy/GtkUtilities.jl) to
+[GtkReactive](https://github.com/JuliaGizmos/GtkReactive.jl).  One
+consequence is that you now need to hold down Ctrl for any zoom
+operation.  You can now shift the displayed region by click-dragging
+on the image.
+
+# Introduction
+
 This package contains tools for visualizing profiling data collected
 with [Julia's][Julia] built-in sampling
 [profiler](http://docs.julialang.org/en/latest/stdlib/profile/). It
