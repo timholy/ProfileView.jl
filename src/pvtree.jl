@@ -1,7 +1,6 @@
 module PVTree
 
 using ..Tree
-using Compat
 
 export PVData, buildgraph!, prunegraph!
 
@@ -11,7 +10,7 @@ type PVData
     hspan::UnitRange{Int} # horizontal span (used as the x-axis in display)
     status::Int        # nonzero for special handling, (e.g., gc events)
 end
-PVData(hspan::UnitRange{Int}) = PVData(@compat(UInt(0)), hspan, 0)
+PVData(hspan::UnitRange{Int}) = PVData(UInt(0), hspan, 0)
 PVData(ip::UInt, hspan::UnitRange{Int}) = PVData(ip, hspan, 0)
 
 # Suppose we have several dicts:
