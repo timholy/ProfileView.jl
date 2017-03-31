@@ -2,7 +2,7 @@
 
 [![Build Status](https://travis-ci.org/timholy/ProfileView.jl.svg)](https://travis-ci.org/timholy/ProfileView.jl)
 
-# NEWS for users of the Gtk version
+# NEWS
 
 ProfileView has switched from
 [GtkUtilities](https://github.com/timholy/GtkUtilities.jl) to
@@ -10,6 +10,11 @@ ProfileView has switched from
 consequence is that you now need to hold down Ctrl for any zoom
 operation.  You can now shift the displayed region by click-dragging
 on the image.
+
+Red highlighting has been restored; it now highlights
+type-instabilities, not garbage collection, as a means to better
+distinguish "legitimate" uses of allocation from ones that might be
+avoidable.
 
 # Introduction
 
@@ -88,15 +93,42 @@ things about this function:
   the `mapslices(sort,...)` simply because it has to process more
   data.)
 
-- In this plot, red is a special color: it is reserved for function
-  calls that trigger *garbage collection*, a time-consuming process
-  that sometimes serves as a bottleneck or as a warning of
-  type-instability.  Here one could see one example of
-  garbage-collection occuring inside `fft`, and several inside
-  `mapslices`.
+Now let's look at another example function:
 
-Further discussion of the proper interpretation of the red bars can be
-found [below](#gcdetails).
+```julia
+unstable(x) = x > 0.5 ? true : 0.0
+
+function profile_unstable_test(m, n)
+    s = s2 = 0
+    for i = 1:n
+        for k = 1:m
+            s += unstable(rand())
+        end
+        x = collect(1:20)
+        s2 += sum(x)
+    end
+    s, s2
+end
+
+profile_unstable_test(1, 1)
+Profile.clear()
+@profile profile_unstable_test(10, 10^6)
+ProfileView.view()
+```
+
+The main thing to note about this function is that the function
+`unstable` is not inferrable; it can return either a `Bool` or a
+`Float64` depending on the *value* (not type) of `x`.  When we
+visualize the profiling results for this function, we see something
+like the following:
+
+![ProfileView](readme_images/pv2.jpg)
+
+In this plot, red is a special color: it is reserved for function
+calls that are deduced to be non-inferrable (here by executing the C
+function `jl_invoke`). Because type-instability often has a
+significant impact on performance, we highlight the problematic call
+in red.
 
 ## GUI features
 
@@ -195,24 +227,5 @@ ProfileView.svgwrite("profile_results.svg", bt, lidict)
 if you've `retrieve`d stored data.
 
 Alternatively, run ProfileView inside an IJulia notebook and then save the notebook.
-
-<a name="gcdetails"/>
-### Important points about garbage-collection
-
-You should expect the width and placement of the red bars to vary
-from one profile to the next, because garbage-collection is an
-infrequent event and therefore highly variable.
-
-Lines triggering garbage-collection are often fruitful targets for
-optimization. However, note that red bars indicate
-*garbage-collection*, not *allocation*, and in reality it's the latter
-that is usually the true source of trouble.  It's quite possible to
-have a large allocation that procedes without garbage collection (and
-therefore doesn't take much time), only to be followed by a tiny
-allocation that triggers garbage collection but which cannot itself be
-profitably optimized. Your best way to avoid being fooled is to
-collect quite a lot of profiling data (i.e., run your code for
-longer), so that all operations allocating memory will likely trigger
-a garbage-collection at some point.
 
 [Julia]: http://julialang.org "Julia"

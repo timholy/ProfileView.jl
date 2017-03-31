@@ -98,7 +98,7 @@ function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine,
                        pruned)
     nuip = length(uip)
     isjl = Dict(zip(uip, [all(x->!x.from_c, l) for l in lkup]))
-    isgc = Dict(zip(uip, [any(x->x.func == "jl_gc_collect", l) for l in lkup]))
+    isgc = Dict(zip(uip, [any(is_gc_call, l) for l in lkup]))
     isjl[UInt(0)] = false  # needed for root below
     isgc[UInt(0)] = false
     p = Profile.liperm(map(first, lkup))
@@ -312,6 +312,8 @@ function fillrow!(img, j, rng::UnitRange{Int}, colorindex, colorlen, regcolor, g
         return mod1(colorindex+1, colorlen)
     end
 end
+
+is_gc_call(f) = f.func == :jl_invoke
 
 #### Debugging code
 
