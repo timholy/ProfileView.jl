@@ -1,18 +1,11 @@
-VERSION >= v"0.4.0-dev+6521" && __precompile__()
+__precompile__()
 
 module ProfileView
 
 using Colors
-using Compat
 
 import Base: contains, isequal, show, mimewritable
-@compat import Base.show
 
-if VERSION < v"0.4.0-dev+980"
-    builddict(a, b) = Dict(a,b)
-else
-    builddict(a, b) = Dict(zip(a,b))
-end
 include("tree.jl")
 include("pvtree.jl")
 
@@ -25,7 +18,7 @@ immutable TagData
     ip::UInt
     status::Int
 end
-const TAGNONE = TagData(@compat(UInt(0)), -1)
+const TAGNONE = TagData(UInt(0), -1)
 
 type ProfileData
     img
@@ -53,6 +46,13 @@ function __init__()
         eval(Expr(:import, :ProfileViewGtk))
         @eval begin
             view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, pruned = []) = ProfileViewGtk.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, pruned=pruned)
+
+            closeall() = ProfileViewGtk.closeall()
+            @doc """
+    closeall()
+
+Closes all windows opened by ProfileView.
+""" -> closeall
         end
     end
     pop!(LOAD_PATH)
@@ -91,12 +91,8 @@ function prepare_data(data, lidict)
     # Do code address lookups on all unique instruction pointers
     uip = unique(vcat(bt...))
     if lidict == nothing
-        if VERSION < v"0.5.0-dev+4192"
-            lkup = [Profile.lookup(ip) for ip in uip]
-        else
-            lkup = Vector{StackFrame}[Profile.lookup(ip) for ip in uip]
-        end
-        lidict = builddict(uip, lkup)
+        lkup = Vector{StackFrame}[Profile.lookup(ip) for ip in uip]
+        lidict = Dict(zip(uip, lkup))
     else
         lkup = [lidict[ip] for ip in uip]
     end
@@ -108,29 +104,15 @@ prepare_data(::Void, ::Void) = nothing, nothing, nothing, nothing, nothing
 function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine,
                        pruned)
     nuip = length(uip)
-    if VERSION < v"0.5.0-dev+2420"
-        isjl = builddict(uip, [!lkup[i].fromC for i = 1:nuip])
-    elseif VERSION < v"0.5.0-dev+4192"
-        isjl = builddict(uip, [!lkup[i].from_c for i = 1:nuip])
-    else
-        isjl = builddict(uip, [all(x->!x.from_c, l) for l in lkup])
-    end
-    if VERSION < v"0.5.0-dev+4192"
-        isgc = builddict(uip, [lkup[i].func == "jl_gc_collect" for i = 1:nuip])
-    else
-        isgc = builddict(uip, [any(x->x.func == "jl_gc_collect", l) for l in lkup])
-    end
-    isjl[@compat(UInt(0))] = false  # needed for root below
-    isgc[@compat(UInt(0))] = false
-    if VERSION < v"0.5.0-dev+4192"
-        p = Profile.liperm(lkup)
-    else
-        p = Profile.liperm(map(first, lkup))
-    end
+    isjl = Dict(zip(uip, [all(x->!x.from_c, l) for l in lkup]))
+    isgc = Dict(zip(uip, [any(is_gc_call, l) for l in lkup]))
+    isjl[UInt(0)] = false  # needed for root below
+    isgc[UInt(0)] = false
+    p = Profile.liperm(map(first, lkup))
     rank = similar(p)
     rank[p] = 1:length(p)
-    ip2so = builddict(uip, rank)
-    so2ip = builddict(rank, uip)
+    ip2so = Dict(zip(uip, rank))
+    so2ip = Dict(zip(rank, uip))
     # Build the graph
     level = 0
     w = sum(counts)
@@ -172,7 +154,7 @@ function svgwrite(filename::AbstractString, data, lidict; C = false, colorgc = t
     img, lidict, imgtags = prepare(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine, pruned=pruned)
     pd = ProfileData(img, lidict, imgtags, fontsize)
     open(filename, "w") do file
-        @compat show(file, "image/svg+xml", pd)
+        show(file, "image/svg+xml", pd)
     end
     nothing
 end
@@ -184,8 +166,7 @@ end
 
 mimewritable(::MIME"image/svg+xml", pd::ProfileData) = true
 
-@compat function show(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
-
+function show(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
     img = pd.img
     lidict = pd.lidict
     imgtags = pd.imgtags
@@ -210,16 +191,8 @@ mimewritable(::MIME"image/svg+xml", pd::ProfileData) = true
     function printrec(f, samples, xstart, xend, y, tag, rgb)
         width = xend - xstart
         li = lidict[tag.ip]
-        info = if VERSION < v"0.5.0-dev+4192"
-            "$(li.func) in $(li.file):$(li.line)"
-        else
-            join(["$(l.func) in $(l.file):$(l.line)" for l in li], "; ")
-        end
-        shortinfo = if VERSION < v"0.5.0-dev+4192"
-            info
-        else
-            join(["$(l.func) in $(basename(string(l.file))):$(l.line)" for l in li], "; ")
-        end
+        info = join(["$(l.func) in $(l.file):$(l.line)" for l in li], "; ")
+        shortinfo = join(["$(l.func) in $(basename(string(l.file))):$(l.line)" for l in li], "; ")
         info = eschtml(info)
         shortinfo = eschtml(shortinfo)
         #if avgcharwidth*3 > width
@@ -347,6 +320,8 @@ function fillrow!(img, j, rng::UnitRange{Int}, colorindex, colorlen, regcolor, g
     end
 end
 
+is_gc_call(f) = f.func == :jl_invoke
+
 #### Debugging code
 
 function checkidentity(ip2so, so2ip)
@@ -397,8 +372,8 @@ end
 
 function checkstatus(parent::Node, isgc::Dict, isjl::Dict, C, lidict)
     if isgc[parent.data.ip] && parent.data.status == 0
-            @show lidict[parent.data.ip]
-            error("gc should be set, and it isn't")
+        @show lidict[parent.data.ip]
+        error("gc should be set, and it isn't")
     end
     for c in parent
         checkstatus(c, isgc, isjl, C, lidict)
@@ -415,22 +390,12 @@ function checkprunedgc(parent::Node, tf::Bool)
     tf
 end
 
-if VERSION < v"0.5.0-dev+4192"
-    function pushpruned!(pruned_ips, pruned, lidict)
-        for (ip, li) in lidict
+function pushpruned!(pruned_ips, pruned, lidict)
+    for (ip, liv) in lidict
+        for li in liv
             if (li.func, basename(string(li.file))) in pruned
                 push!(pruned_ips, ip)
-            end
-        end
-    end
-else
-    function pushpruned!(pruned_ips, pruned, lidict)
-        for (ip, liv) in lidict
-            for li in liv
-                if (li.func, basename(string(li.file))) in pruned
-                    push!(pruned_ips, ip)
-                    break
-                end
+                break
             end
         end
     end

@@ -6,6 +6,8 @@ using Gtk.ShortNames, GtkReactive, Colors, FileIO, IntervalSets
 import Cairo
 using Graphics
 
+using Gtk.GConstants.GdkModifierType: SHIFT, CONTROL, MOD1
+
 type ZoomCanvas
     bb::BoundingBox  # in user-coordinates
     c::Canvas
@@ -14,6 +16,15 @@ end
 function __init__()
     eval(Expr(:import, :ProfileView))
 end
+
+function closeall()
+    for (w, _) in window_wrefs
+        destroy(w)
+    end
+    nothing
+end
+
+const window_wrefs = WeakKeyDict{Gtk.GtkWindowLeaf,Void}()
 
 function view(data = Profile.fetch(); lidict=nothing, kwargs...)
     bt, uip, counts, lidict, lkup = ProfileView.prepare_data(data, lidict)
@@ -32,10 +43,25 @@ function view(data = Profile.fetch(); lidict=nothing, kwargs...)
     signal_connect(open_cb, tb_open, "clicked", Void, (), false, (widget(c),kwargs))
     signal_connect(save_as_cb, tb_save_as, "clicked", Void, (), false, (widget(c),data,lidict,kwargs))
     win = Window(bx, "Profile")
+    GtkReactive.gc_preserve(win, c)
+    # Register the window with closeall
+    window_wrefs[win] = nothing
+    signal_connect(win, :destroy) do w
+        delete!(window_wrefs, win)
+    end
+
     if data != nothing && !isempty(data)
         viewprof(c, bt, uip, counts, lidict, lkup; kwargs...)
     end
-    GtkReactive.gc_preserve(win, c)
+
+    # Ctrl-w and Ctrl-q destroy the window
+    signal_connect(win, "key-press-event") do w, evt
+        if evt.state == CONTROL && (evt.keyval == UInt('q') || evt.keyval == UInt('w'))
+            @schedule destroy(w)
+            nothing
+        end
+    end
+
     showall(win)
 end
 
@@ -77,13 +103,9 @@ function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, f
             tag = gettag(xu, yu)
             if tag != ProfileView.TAGNONE
                 li = lidict[tag.ip]
-                if VERSION < v"0.5.0-dev+4192"
-                    str = string(basename(string(li.file)), ", ", li.func, ": line ", li.line)
-                else
-                    str = ""
-                    for l in li
-                        str = string(str, string(basename(string(l.file)), ", ", l.func, ": line ", l.line), "; ")
-                    end
+                str = ""
+                for l in li
+                    str = string(str, string(basename(string(l.file)), ", ", l.func, ": line ", l.line), "; ")
                 end
                 set_source(ctx, ProfileView.fontcolor)
                 Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
@@ -112,18 +134,14 @@ function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, f
             tag = gettag(xu, yu)
             if tag != ProfileView.TAGNONE
                 li = lidict[tag.ip]
-                if VERSION < v"0.5.0-dev+4192"
-                    println(li.file, ", ", li.func, ": line ", li.line)
-                else
-                    firstline = true
-                    for l in li
-                        if !firstline
-                            print("  ")
-                        else
-                            firstline = false
-                        end
-                        println(l.file, ", ", l.func, ": line ", l.line)
+                firstline = true
+                for l in li
+                    if !firstline
+                        print("  ")
+                    else
+                        firstline = false
                     end
+                    println(l.file, ", ", l.func, ": line ", l.line)
                 end
             end
         end
