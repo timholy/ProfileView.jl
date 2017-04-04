@@ -99,7 +99,9 @@ things about this function:
   the `mapslices(sort,...)` simply because it has to process more
   data.)
 
-Now let's look at another example function:
+One thing we haven't yet discussed is the difference between the red
+bars and the more pastel-colored bars. To explore this difference,
+let's consider a different function:
 
 ```julia
 unstable(x) = x > 0.5 ? true : 0.0
@@ -123,18 +125,27 @@ ProfileView.view()
 ```
 
 The main thing to note about this function is that the function
-`unstable` is not inferrable; it can return either a `Bool` or a
-`Float64` depending on the *value* (not type) of `x`.  When we
-visualize the profiling results for this function, we see something
-like the following:
+`unstable` does not have inferrable return type (a.k.a., it is
+type-unstable); it can return either a `Bool` or a `Float64` depending
+on the *value* (not type) of `x`.  When we visualize the profiling
+results for this function, we see something like the following:
 
 ![ProfileView](readme_images/pv2.jpg)
 
 In this plot, red is a special color: it is reserved for function
-calls that are deduced to be non-inferrable (here by executing the C
-function `jl_invoke`). Because type-instability often has a
-significant impact on performance, we highlight the problematic call
-in red.
+calls that are deduced to be non-inferrable (by virtue of their
+execution of the C functions `jl_invoke` or
+`jl_apply_generic`). Because type-instability often has a significant
+impact on performance, we highlight the problematic call in red. It's
+worth noting that some red is unavoidable; for example, the REPL can't
+predict in advance the return types from what users type at the
+prompt. Red bars are problematic only when they account for a sizable
+fraction of the top "row," as only in such cases are they likely to be
+the source of a significant performance bottleneck. In our first
+example, we can see that `mapslices` is (internally) non-inferrable;
+from the absence of pastel-colored bars above much of the red, we
+might guess that this type-instability makes a substantial
+contribution to its total run time.
 
 ## GUI features
 
