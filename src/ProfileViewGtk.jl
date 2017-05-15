@@ -126,22 +126,30 @@ function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, f
         imgtags[x,Y-y+1]
     end
     # Hover over a block and see the source line
-    # Right-click prints the full path, function, and line to the console
+    # Left-click prints the full path, function, and line to the console
+    # Right-click calls the edit() function
     sigshow = map(c.mouse.buttonpress) do btn
-        if btn.button == 3
+        if btn.button == 1 || btn.button == 3
             ctx = getgc(c)
             xu, yu = btn.position.x, btn.position.y
             tag = gettag(xu, yu)
             if tag != ProfileView.TAGNONE
                 li = lidict[tag.ip]
-                firstline = true
-                for l in li
-                    if !firstline
-                        print("  ")
-                    else
-                        firstline = false
+                if btn.button == 1
+                    firstline = true
+                    for l in li
+                        if !firstline
+                            print("  ")
+                        else
+                            firstline = false
+                        end
+                        println(l.file, ", ", l.func, ": line ", l.line)
                     end
-                    println(l.file, ", ", l.func, ": line ", l.line)
+                elseif btn.button == 3
+                    if !isempty(li)
+                        l = first(li)
+                        edit(string(l.file),l.line)
+                    end
                 end
             end
         end
