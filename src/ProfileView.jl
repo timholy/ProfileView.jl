@@ -35,9 +35,15 @@ const colors = distinguishable_colors(13, [bkg,fontcolor,gccolor],
                                       cchoices=Float64[0, 50, 60, 70],
                                       hchoices=linspace(0, 330, 24))[4:end]
 
+function have_display()
+    !is_unix() && return true
+    is_apple() && return true
+    return haskey(ENV, "DISPLAY")
+end
+
 function __init__()
     push!(LOAD_PATH, splitdir(@__FILE__)[1])
-    if isdefined(Main, :IJulia) && !isdefined(Main, :PROFILEVIEW_USEGTK)
+    if (isdefined(Main, :IJulia) && !isdefined(Main, :PROFILEVIEW_USEGTK)) || !have_display()
         eval(Expr(:import, :ProfileViewSVG))
         @eval begin
             view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, pruned = []) = ProfileViewSVG.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, pruned=pruned)
