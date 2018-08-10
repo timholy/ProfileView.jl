@@ -41,15 +41,17 @@ function have_display()
     return haskey(ENV, "DISPLAY")
 end
 
+include("ProfileViewSVG.jl")
+include("ProfileViewGtk.jl")
+
 function __init__()
-    push!(LOAD_PATH, splitdir(@__FILE__)[1])
     if (isdefined(Main, :IJulia) && !isdefined(Main, :PROFILEVIEW_USEGTK)) || !have_display()
-        eval(Expr(:import, :ProfileViewSVG))
+        eval(Expr(:import, Symbol(".ProfileViewSVG")))
         @eval begin
             view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, pruned = []) = ProfileViewSVG.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, pruned=pruned)
         end
     else
-        eval(Expr(:import, :ProfileViewGtk))
+        eval(Expr(:import, Symbol(".ProfileViewGtk")))
         @eval begin
             view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, pruned = []) = ProfileViewGtk.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, pruned=pruned)
 
