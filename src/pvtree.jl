@@ -5,7 +5,7 @@ using ..Tree
 export PVData, buildgraph!, prunegraph!
 
 # ProfileView data we need attached to each node of the graph:
-type PVData
+mutable struct PVData
     ip::UInt           # the instruction pointer
     hspan::UnitRange{Int} # horizontal span (used as the x-axis in display)
     status::Int        # nonzero for special handling, (e.g., gc events)

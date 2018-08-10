@@ -8,7 +8,7 @@ using Graphics
 
 using Gtk.GConstants.GdkModifierType: SHIFT, CONTROL, MOD1
 
-type ZoomCanvas
+mutable struct ZoomCanvas
     bb::BoundingBox  # in user-coordinates
     c::Canvas
 end

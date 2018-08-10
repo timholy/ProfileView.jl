@@ -1,6 +1,6 @@
 module Tree
 
-import Base: start, done, next, show
+import Base: iterate, show
 
 export Node,
     addchild,
@@ -16,14 +16,14 @@ export Node,
 #     Any missing links (e.g., "c" does not have a sibling) link back to itself (c.sibling == c)
 # With this organization, no arrays need to be allocated.
 
-type Node{T}
+mutable struct Node{T}
     data::T
     parent::Node{T}
     child::Node{T}
     sibling::Node{T}
     
     # Constructor for the root of the tree
-    function (::Type{Node{T}}){T}(data::T)
+    function (::Type{Node{T}})(data::T) where T
         n = new{T}(data)
         n.parent = n
         n.child = n
@@ -31,15 +31,15 @@ type Node{T}
         n
     end
     # Constructor for all others
-    function (::Type{Node{T}}){T}(data::T, parent::Node)
+    function (::Type{Node{T}})(data::T, parent::Node) where T
         n = new{T}(data, parent)
         n.child = n
         n.sibling = n
         n
     end
 end
-Node{T}(data::T) = Node{T}(data)
-Node{T}(data::T, parent::Node{T}) = Node{T}(data, parent)
+Node(data::T) where {T} = Node{T}(data)
+Node(data::T, parent::Node{T}) where {T} = Node{T}(data, parent)
 
 function lastsibling(sib::Node)
     newsib = sib.sibling
@@ -50,7 +50,7 @@ function lastsibling(sib::Node)
     sib
 end
 
-function addsibling{T}(oldersib::Node{T}, data::T)
+function addsibling(oldersib::Node{T}, data::T) where T
     if oldersib.sibling != oldersib
         error("Truncation of sibling list")
     end
@@ -59,7 +59,7 @@ function addsibling{T}(oldersib::Node{T}, data::T)
     youngersib
 end
 
-function addchild{T}(parent::Node{T}, data::T)
+function addchild(parent::Node{T}, data::T) where T
     newc = Node(data, parent)
     prevc = parent.child
     if prevc == parent
@@ -80,9 +80,10 @@ show(io::IO, n::Node) = print(io, n.data)
 # for c in parent
 #     # do something
 # end
-start(n::Node) = n.child
-done(n::Node, state::Node) = n == state
-next(n::Node, state::Node) = state, state == state.sibling ? n : state.sibling
+function iterate(n::Node, state = n.child)
+    n == state && return nothing
+    return state, state == state.sibling ? n : state.sibling
+end
 
 function showedges(io::IO, parent::Node, printfunc = identity)
     str = printfunc(parent.data)

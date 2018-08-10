@@ -14,13 +14,13 @@ using .PVTree
 
 include("svgwriter.jl")
 
-immutable TagData
+struct TagData
     ip::UInt
     status::Int
 end
 const TAGNONE = TagData(UInt(0), -1)
 
-type ProfileData
+mutable struct ProfileData
     img
     lidict
     imgtags
@@ -33,11 +33,11 @@ const gccolor = colorant"red"
 const colors = distinguishable_colors(13, [bkg,fontcolor,gccolor],
                                       lchoices=Float64[65, 70, 75, 80],
                                       cchoices=Float64[0, 50, 60, 70],
-                                      hchoices=linspace(0, 330, 24))[4:end]
+                                      hchoices=range(0, stop=330, length=24))[4:end]
 
 function have_display()
-    !is_unix() && return true
-    is_apple() && return true
+    !Sys.isunix() && return true
+    Sys.isapple() && return true
     return haskey(ENV, "DISPLAY")
 end
 
@@ -53,12 +53,12 @@ function __init__()
         @eval begin
             view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, pruned = []) = ProfileViewGtk.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, pruned=pruned)
 
-            closeall() = ProfileViewGtk.closeall()
             @doc """
     closeall()
 
 Closes all windows opened by ProfileView.
-""" -> closeall
+"""
+            closeall() = ProfileViewGtk.closeall()
         end
     end
     pop!(LOAD_PATH)
@@ -105,7 +105,7 @@ function prepare_data(data, lidict)
     bt, uip, counts, lidict, lkup
 end
 
-prepare_data(::Void, ::Void) = nothing, nothing, nothing, nothing, nothing
+prepare_data(::Nothing, ::Nothing) = nothing, nothing, nothing, nothing, nothing
 
 function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine,
                        pruned)
