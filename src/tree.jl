@@ -23,7 +23,7 @@ mutable struct Node{T}
     sibling::Node{T}
     
     # Constructor for the root of the tree
-    function (::Type{Node{T}})(data::T) where T
+    function Node{T}(data) where T
         n = new{T}(data)
         n.parent = n
         n.child = n
@@ -31,7 +31,7 @@ mutable struct Node{T}
         n
     end
     # Constructor for all others
-    function (::Type{Node{T}})(data::T, parent::Node) where T
+    function Node{T}(data, parent::Node) where T
         n = new{T}(data, parent)
         n.child = n
         n.sibling = n
@@ -39,7 +39,7 @@ mutable struct Node{T}
     end
 end
 Node(data::T) where {T} = Node{T}(data)
-Node(data::T, parent::Node{T}) where {T} = Node{T}(data, parent)
+Node(data, parent::Node{T}) where {T} = Node{T}(data, parent)
 
 function lastsibling(sib::Node)
     newsib = sib.sibling
@@ -50,7 +50,7 @@ function lastsibling(sib::Node)
     sib
 end
 
-function addsibling(oldersib::Node{T}, data::T) where T
+function addsibling(oldersib::Node{T}, data) where T
     if oldersib.sibling != oldersib
         error("Truncation of sibling list")
     end
@@ -59,7 +59,7 @@ function addsibling(oldersib::Node{T}, data::T) where T
     youngersib
 end
 
-function addchild(parent::Node{T}, data::T) where T
+function addchild(parent::Node{T}, data) where T
     newc = Node(data, parent)
     prevc = parent.child
     if prevc == parent
