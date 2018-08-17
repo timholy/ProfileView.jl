@@ -37,9 +37,9 @@ function buildgraph!(parent::Node, bt::Vector{Vector{UInt}}, counts::Vector{Int}
         end
     end
     ngroups = length(dorder)
-    group = Vector{Vector{Int}}(ngroups)  # indices in bt that have the same sortorder
-    n = Array{Int}(ngroups)              # aggregated counts for this group
-    order = Array{Int}(ngroups)
+    group = Vector{Vector{Int}}(undef, ngroups)  # indices in bt that have the same sortorder
+    n = Array{Int}(undef, ngroups)              # aggregated counts for this group
+    order = Array{Int}(undef, ngroups)
     i = 1
     for (key, v) in dorder
         order[i] = key

@@ -5,7 +5,7 @@ module ProfileView
 using Profile
 using Colors
 
-import Base: contains, isequal, show, mimewritable
+import Base: isequal, show
 
 include("tree.jl")
 include("pvtree.jl")
@@ -98,7 +98,7 @@ function prepare_data(data, lidict)
     # Do code address lookups on all unique instruction pointers
     uip = unique(vcat(bt...))
     if lidict == nothing
-        lkup = Vector{StackFrame}[Profile.lookup(ip) for ip in uip]
+        lkup = Vector{StackTraces.StackFrame}[Profile.lookup(ip) for ip in uip]
         lidict = Dict(zip(uip, lkup))
     else
         lkup = [lidict[ip] for ip in uip]
@@ -171,7 +171,7 @@ function svgwrite(filename::AbstractString; kwargs...)
 end
 
 
-mimewritable(::MIME"image/svg+xml", pd::ProfileData) = true
+Base.showable(::MIME"image/svg+xml", pd::ProfileData) = true
 
 function show(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
     img = pd.img
@@ -268,7 +268,7 @@ function buildtags!(rowtags, parent, level)
     end
     t = rowtags[level]
     for c in parent
-        t[c.data.hspan] = TagData(c.data.ip, c.data.status)
+        t[c.data.hspan] .= Ref(TagData(c.data.ip, c.data.status))
         buildtags!(rowtags, c, level+1)
     end
 end
@@ -319,10 +319,10 @@ end
 
 function fillrow!(img, j, rng::UnitRange{Int}, colorindex, colorlen, regcolor, gccolor, status)
     if status > 0
-        img[rng,j] = gccolor
+        img[rng,j] .= gccolor
         return colorindex
     else
-        img[rng,j] = regcolor
+        img[rng,j] .= regcolor
         return mod1(colorindex+1, colorlen)
     end
 end
