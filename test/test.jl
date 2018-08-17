@@ -1,3 +1,4 @@
+using Profile
 using ProfileView
 
 function profile_test(n)

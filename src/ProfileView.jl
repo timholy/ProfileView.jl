@@ -2,6 +2,7 @@ __precompile__()
 
 module ProfileView
 
+using Profile
 using Colors
 
 import Base: contains, isequal, show, mimewritable
