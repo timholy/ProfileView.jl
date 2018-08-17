@@ -1,5 +1,5 @@
-const snapsvgjs = joinpath(dirname(@__FILE__), "..", "templates", "snap.svg-min.js")
-const viewerjs = joinpath(dirname(@__FILE__), "viewer.js")
+const snapsvgjs = joinpath(@__DIR__, "..", "templates", "snap.svg-min.js")
+const viewerjs = joinpath(@__DIR__, "viewer.js")
 
 function escape_script(js::AbstractString)
     return replace(js, "]]", "] ]")

@@ -42,7 +42,7 @@ function have_display()
 end
 
 function __init__()
-    push!(LOAD_PATH, splitdir(@__FILE__)[1])
+    push!(LOAD_PATH, @__DIR__)
     if (isdefined(Main, :IJulia) && !isdefined(Main, :PROFILEVIEW_USEGTK)) || !have_display()
         @eval import ProfileViewSVG
         @eval begin
