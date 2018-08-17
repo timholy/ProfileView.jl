@@ -3,7 +3,7 @@ __precompile__()
 module ProfileViewSVG
 
 function __init__()
-    eval(Expr(:import, :ProfileView))
+    @eval import ProfileView
 end
 
 function view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, pruned = true)

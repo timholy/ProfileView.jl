@@ -14,7 +14,7 @@ mutable struct ZoomCanvas
 end
 
 function __init__()
-    eval(Expr(:import, :ProfileView))
+    @eval import ProfileView
 end
 
 function closeall()
