@@ -2,9 +2,10 @@ __precompile__()
 
 module ProfileView
 
+using Profile
 using Colors
 
-import Base: contains, isequal, show, mimewritable
+import Base: isequal, show
 
 include("tree.jl")
 include("pvtree.jl")
@@ -14,13 +15,13 @@ using .PVTree
 
 include("svgwriter.jl")
 
-immutable TagData
+struct TagData
     ip::UInt
     status::Int
 end
 const TAGNONE = TagData(UInt(0), -1)
 
-type ProfileData
+mutable struct ProfileData
     img
     lidict
     imgtags
@@ -33,32 +34,32 @@ const gccolor = colorant"red"
 const colors = distinguishable_colors(13, [bkg,fontcolor,gccolor],
                                       lchoices=Float64[65, 70, 75, 80],
                                       cchoices=Float64[0, 50, 60, 70],
-                                      hchoices=linspace(0, 330, 24))[4:end]
+                                      hchoices=range(0, stop=330, length=24))[4:end]
 
 function have_display()
-    !is_unix() && return true
-    is_apple() && return true
+    !Sys.isunix() && return true
+    Sys.isapple() && return true
     return haskey(ENV, "DISPLAY")
 end
 
 function __init__()
-    push!(LOAD_PATH, splitdir(@__FILE__)[1])
+    push!(LOAD_PATH, @__DIR__)
     if (isdefined(Main, :IJulia) && !isdefined(Main, :PROFILEVIEW_USEGTK)) || !have_display()
-        eval(Expr(:import, :ProfileViewSVG))
+        @eval import ProfileViewSVG
         @eval begin
             view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, pruned = []) = ProfileViewSVG.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, pruned=pruned)
         end
     else
-        eval(Expr(:import, :ProfileViewGtk))
+        @eval import ProfileViewGtk
         @eval begin
             view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, pruned = []) = ProfileViewGtk.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, pruned=pruned)
 
-            closeall() = ProfileViewGtk.closeall()
             @doc """
     closeall()
 
 Closes all windows opened by ProfileView.
-""" -> closeall
+"""
+            closeall() = ProfileViewGtk.closeall()
         end
     end
     pop!(LOAD_PATH)
@@ -70,7 +71,7 @@ function prepare(data; C = false, lidict = nothing, colorgc = true, combine = tr
 end
 
 function prepare_data(data, lidict)
-    bt, counts = Profile.tree_aggregate(data)
+    bt, counts = tree_aggregate(data)
     if isempty(counts)
         Profile.warning_empty()
         error("Nothing to view")
@@ -97,7 +98,7 @@ function prepare_data(data, lidict)
     # Do code address lookups on all unique instruction pointers
     uip = unique(vcat(bt...))
     if lidict == nothing
-        lkup = Vector{StackFrame}[Profile.lookup(ip) for ip in uip]
+        lkup = Vector{StackTraces.StackFrame}[Profile.lookup(ip) for ip in uip]
         lidict = Dict(zip(uip, lkup))
     else
         lkup = [lidict[ip] for ip in uip]
@@ -105,7 +106,7 @@ function prepare_data(data, lidict)
     bt, uip, counts, lidict, lkup
 end
 
-prepare_data(::Void, ::Void) = nothing, nothing, nothing, nothing, nothing
+prepare_data(::Nothing, ::Nothing) = nothing, nothing, nothing, nothing, nothing
 
 function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine,
                        pruned)
@@ -170,7 +171,7 @@ function svgwrite(filename::AbstractString; kwargs...)
 end
 
 
-mimewritable(::MIME"image/svg+xml", pd::ProfileData) = true
+Base.showable(::MIME"image/svg+xml", pd::ProfileData) = true
 
 function show(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
     img = pd.img
@@ -267,7 +268,7 @@ function buildtags!(rowtags, parent, level)
     end
     t = rowtags[level]
     for c in parent
-        t[c.data.hspan] = TagData(c.data.ip, c.data.status)
+        t[c.data.hspan] .= Ref(TagData(c.data.ip, c.data.status))
         buildtags!(rowtags, c, level+1)
     end
 end
@@ -318,10 +319,10 @@ end
 
 function fillrow!(img, j, rng::UnitRange{Int}, colorindex, colorlen, regcolor, gccolor, status)
     if status > 0
-        img[rng,j] = gccolor
+        img[rng,j] .= gccolor
         return colorindex
     else
-        img[rng,j] = regcolor
+        img[rng,j] .= regcolor
         return mod1(colorindex+1, colorlen)
     end
 end
@@ -406,5 +407,28 @@ function pushpruned!(pruned_ips, pruned, lidict)
         end
     end
 end
+
+## A tree representation
+# Identify and counts repetitions of all unique backtraces
+function tree_aggregate(data::Vector{UInt64})
+    iz = findall(iszero, data)  # find the breaks between backtraces
+    treecount = Dict{Vector{UInt64},Int}()
+    istart = 1
+    for iend in iz
+        tmp = data[iend - 1 : -1 : istart]
+        treecount[tmp] = get(treecount, tmp, 0) + 1
+        istart = iend + 1
+    end
+    bt = Vector{Vector{UInt64}}(undef, 0)
+    counts = Vector{Int}(undef, 0)
+    for (k, v) in treecount
+        if !isempty(k)
+            push!(bt, k)
+            push!(counts, v)
+        end
+    end
+    return (bt, counts)
+end
+
 
 end

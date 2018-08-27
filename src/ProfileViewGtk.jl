@@ -8,13 +8,13 @@ using Graphics
 
 using Gtk.GConstants.GdkModifierType: SHIFT, CONTROL, MOD1
 
-type ZoomCanvas
+mutable struct ZoomCanvas
     bb::BoundingBox  # in user-coordinates
     c::Canvas
 end
 
 function __init__()
-    eval(Expr(:import, :ProfileView))
+    @eval import ProfileView
 end
 
 function closeall()
@@ -24,13 +24,13 @@ function closeall()
     nothing
 end
 
-const window_wrefs = WeakKeyDict{Gtk.GtkWindowLeaf,Void}()
+const window_wrefs = WeakKeyDict{Gtk.GtkWindowLeaf,Nothing}()
 
 function view(data = Profile.fetch(); lidict=nothing, kwargs...)
     bt, uip, counts, lidict, lkup = ProfileView.prepare_data(data, lidict)
     # Display in a window
     c = canvas(UserUnit)
-    setproperty!(widget(c), :expand, true)
+    set_gtk_property!(widget(c), :expand, true)
     f = Frame(c)
     tb = Toolbar()
     bx = Box(:v)
@@ -40,8 +40,8 @@ function view(data = Profile.fetch(); lidict=nothing, kwargs...)
     tb_save_as = ToolButton("gtk-save-as")
     push!(tb, tb_open)
     push!(tb, tb_save_as)
-    signal_connect(open_cb, tb_open, "clicked", Void, (), false, (widget(c),kwargs))
-    signal_connect(save_as_cb, tb_save_as, "clicked", Void, (), false, (widget(c),data,lidict,kwargs))
+    signal_connect(open_cb, tb_open, "clicked", Nothing, (), false, (widget(c),kwargs))
+    signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict,kwargs))
     win = Window(bx, "Profile")
     GtkReactive.gc_preserve(win, c)
     # Register the window with closeall
@@ -57,17 +57,17 @@ function view(data = Profile.fetch(); lidict=nothing, kwargs...)
     # Ctrl-w and Ctrl-q destroy the window
     signal_connect(win, "key-press-event") do w, evt
         if evt.state == CONTROL && (evt.keyval == UInt('q') || evt.keyval == UInt('w'))
-            @schedule destroy(w)
+            @async destroy(w)
             nothing
         end
     end
 
-    showall(win)
+    Gtk.showall(win)
 end
 
 function viewprof(c, bt, uip, counts, lidict, lkup; C = false, colorgc = true, fontsize = 12, combine = true, pruned=[])
     img, lidict, imgtags = ProfileView.prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine, pruned)
-    img24 = UInt32[reinterpret(UInt32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]'
+    img24 = Matrix(UInt32[reinterpret(UInt32, convert(RGB24, img[i,j])) for i = 1:size(img,1), j = size(img,2):-1:1]')
     fv = XY(0.0..size(img24,2), 0.0..size(img24,1))
     zr = Signal(ZoomRegion(fv, fv))
     sigrb = init_zoom_rubberband(c, zr)

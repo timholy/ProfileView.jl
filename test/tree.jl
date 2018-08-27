@@ -3,7 +3,7 @@ root = Tree.Node(0)
 @assert Tree.isleaf(root)
 nchildren = 0
 for c in root
-    nchildren += 1
+    global nchildren += 1
 end
 @assert nchildren == 0
 c1 = Tree.addchild(root, 1)
@@ -17,7 +17,7 @@ c22 = Tree.addchild(c2, 5)
 nchildren = 0
 for c in root
     @assert !Tree.isroot(c)
-    nchildren += 1
+    global nchildren += 1
 end
 @assert nchildren == 3
 @assert Tree.isleaf(c1)
@@ -30,5 +30,6 @@ end
 children2 = [c21,c22]
 i = 0
 for c in c2
+    global i
     @assert c == children2[i+=1]
 end
