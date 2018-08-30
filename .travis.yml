@@ -7,7 +7,13 @@ julia:
   - nightly
 notifications:
   email: false
+addons:
+  apt:
+      packages:
+          - xvfb
+          - xauth
+          - libgtk-3-0
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia -e 'Pkg.clone(pwd()); Pkg.build("ProfileView")'
-  - xvfb-run julia --check-bounds=yes -e 'Pkg.test("ProfileView"; coverage=true)'
+  - julia -e 'using Pkg; Pkg.clone(pwd()); Pkg.build("ProfileView")'
+  - xvfb-run julia --check-bounds=yes -e 'using Pkg; Pkg.test("ProfileView"; coverage=true)'
