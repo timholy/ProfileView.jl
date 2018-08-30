@@ -43,14 +43,17 @@ function have_display()
 end
 
 function __init__()
-    push!(LOAD_PATH, @__DIR__)
     if (isdefined(Main, :IJulia) && !isdefined(Main, :PROFILEVIEW_USEGTK)) || !have_display()
-        @eval import ProfileViewSVG
+        # @eval import ProfileViewSVG
+        include(joinpath(@__DIR__, "ProfileViewSVG.jl"))
+        @eval import .ProfileViewSVG
         @eval begin
             view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, pruned = []) = ProfileViewSVG.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, pruned=pruned)
         end
     else
-        @eval import ProfileViewGtk
+        # @eval import ProfileViewGtk
+        include(joinpath(@__DIR__, "ProfileViewGtk.jl"))
+        @eval import .ProfileViewGtk
         @eval begin
             view(data = Profile.fetch(); C = false, lidict = nothing, colorgc = true, fontsize = 12, combine = true, pruned = []) = ProfileViewGtk.view(data; C=C, lidict=lidict, colorgc=colorgc, fontsize=fontsize, combine=combine, pruned=pruned)
 
@@ -62,7 +65,6 @@ Closes all windows opened by ProfileView.
             closeall() = ProfileViewGtk.closeall()
         end
     end
-    pop!(LOAD_PATH)
 end
 
 function prepare(data; C = false, lidict = nothing, colorgc = true, combine = true, pruned = [])
