@@ -1,7 +1,6 @@
-__precompile__()
-
 module ProfileViewGtk
 
+using InteractiveUtils
 using Gtk.ShortNames, GtkReactive, Colors, FileIO, IntervalSets
 import Cairo
 using Graphics
