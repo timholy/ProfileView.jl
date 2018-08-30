@@ -2,7 +2,7 @@ const snapsvgjs = joinpath(@__DIR__, "..", "templates", "snap.svg-min.js")
 const viewerjs = joinpath(@__DIR__, "viewer.js")
 
 function escape_script(js::AbstractString)
-    return replace(js, "]]", "] ]")
+    return replace(js, "]]" => "] ]")
 end
 
 function svgheader(f::IO, fig_id::AbstractString; width=1200, height=706, font="Verdana")
@@ -37,9 +37,9 @@ end
 function svgfinish(f::IO, fig_id)
     print(f, """
         </g></g>
-        <script><![CDATA[$(escape_script(readstring(snapsvgjs)))]]></script>
+        <script><![CDATA[$(escape_script(read(snapsvgjs, String)))]]></script>
         <script><![CDATA[
-            $(escape_script(readstring(viewerjs)))
+            $(escape_script(read(viewerjs, String)))
             (function (glob, factory) {
                 if (typeof require === "function" && typeof define === "function" && define.amd) {
                     require(["Snap.svg", "ProfileView"], function (Snap, ProfileView) {
@@ -64,7 +64,7 @@ function svgfinish(f::IO, fig_id)
                 fig.clip = Snap.select('#$fig_id-clip-rect');
                 fig.clip_width  = fig.clip.getBBox().w;
                 fig.clip_middle = fig.clip.getBBox().cy;
-                fig.details = document.getElementById("$fig_id-details").firstChild; 
+                fig.details = document.getElementById("$fig_id-details").firstChild;
 
                 fig.scale = 1.0;
                 fig.shift = fig.viewport_cx;

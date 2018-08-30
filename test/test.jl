@@ -43,3 +43,7 @@ profile_unstable_test(1, 1)
 Profile.clear()
 @profile profile_unstable_test(10, 10^6)
 ProfileView.view()
+
+mktemp() do filename, io
+    ProfileView.svgwrite(io)
+end

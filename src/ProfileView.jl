@@ -1,8 +1,6 @@
-__precompile__()
-
 module ProfileView
 
-using Profile
+using Profile, UUIDs
 using Colors
 
 import Base: isequal, show
@@ -159,13 +157,20 @@ function prepare_image(bt, uip, counts, lidict, lkup, C, colorgc, combine,
     img, lidict, imgtags
 end
 
-function svgwrite(filename::AbstractString, data, lidict; C = false, colorgc = true, fontsize = 12, combine = true, pruned = [])
+function svgwrite(io::IO, data, lidict; C = false, colorgc = true, fontsize = 12, combine = true, pruned = [])
     img, lidict, imgtags = prepare(data, C=C, lidict=lidict, colorgc=colorgc, combine=combine, pruned=pruned)
     pd = ProfileData(img, lidict, imgtags, fontsize)
+    show(io, "image/svg+xml", pd)
+end
+function svgwrite(filename::AbstractString, data, lidict; kwargs...)
     open(filename, "w") do file
-        show(file, "image/svg+xml", pd)
+        svgwrite(file, data, lidict; kwargs...)
     end
     nothing
+end
+function svgwrite(io::IO; kwargs...)
+    data, lidict = Profile.retrieve()
+    svgwrite(io, data, lidict; kwargs...)
 end
 function svgwrite(filename::AbstractString; kwargs...)
     data, lidict = Profile.retrieve()
@@ -192,9 +197,9 @@ function show(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
     ystep = (height - (topmargin + botmargin)) / nrows
     avgcharwidth = 6  # for Verdana 12 pt font
     function eschtml(str)
-        s = replace(str, '<', "&lt;")
-        s = replace(s, '>', "&gt;")
-        s = replace(s, '&', "&amp;")
+        s = replace(str, '<' => "&lt;")
+        s = replace(s, '>' => "&gt;")
+        s = replace(s, '&' => "&amp;")
         s
     end
     function printrec(f, samples, xstart, xend, y, tag, rgb)
@@ -219,7 +224,7 @@ function show(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
         # end
     end
 
-    fig_id = string("fig-", replace(string(Base.Random.uuid4()), "-", ""))
+    fig_id = string("fig-", replace(string(uuid4()), "-" => ""))
     svgheader(f, fig_id, width=width, height=height)
     # rectangles are on a grid and split across multiple columns (must span similar adjacent ones together)
     for r in 1:nrows

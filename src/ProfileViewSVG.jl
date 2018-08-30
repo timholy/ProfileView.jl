@@ -1,5 +1,3 @@
-__precompile__()
-
 module ProfileViewSVG
 
 function __init__()
