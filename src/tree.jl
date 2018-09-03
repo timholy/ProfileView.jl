@@ -102,6 +102,6 @@ function showedges(io::IO, parent::Node, printfunc = identity)
         end
     end
 end
-showedges(parent::Node) = showedges(STDOUT, parent)
+showedges(parent::Node) = showedges(stdout, parent)
 
 end
