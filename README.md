@@ -2,25 +2,8 @@
 
 [![Build Status](https://travis-ci.org/timholy/ProfileView.jl.svg)](https://travis-ci.org/timholy/ProfileView.jl)
 
-# NEWS
-
-Version 0.2 of ProfileView has several major changes:
-
-- Red highlighting has been restored; it now highlights
-  type-instabilities, not garbage collection, as a means to better
-  distinguish legitimate uses of allocation from ones that might be
-  avoidable.
-
-- For users of the Gtk version, ProfileView has switched from
-  [GtkUtilities](https://github.com/timholy/GtkUtilities.jl) to
-  [GtkReactive](https://github.com/JuliaGizmos/GtkReactive.jl).  One
-  consequence is that you now need to hold down Ctrl for any zoom
-  operation.  You can now shift the displayed region by click-dragging
-  on the image.
-
-- Also for users of the Gtk version, Ctrl-q and Ctrl-w close the
-  window. You can also use `ProfileView.closeall()` to close all
-  windows opened by ProfileView.
+Note this README is for users of Julia 0.7 and higher; users of earlier versions
+should see [this page](https://github.com/timholy/ProfileView.jl/tree/julia0.6).
 
 # Introduction
 
@@ -51,16 +34,16 @@ function profile_test(n)
     for i = 1:n
         A = randn(100,100,20)
         m = maximum(A)
-        Afft = fft(A)
-        Am = mapslices(sum, A, 2)
+        Am = mapslices(sum, A; dims=2)
         B = A[:,:,5]
-        Bsort = mapslices(sort, B, 1)
+        Bsort = mapslices(sort, B; dims=1)
         b = rand(100)
         C = B.*b
     end
 end
 
 profile_test(1)  # run once to trigger compilation
+using Profile
 Profile.clear()  # in case we have any previous profiling data
 @profile profile_test(10)
 ```
@@ -74,14 +57,21 @@ If you're following along, you should see something like this:
 
 ![ProfileView](readme_images/pv1.jpg)
 
-This plot is a visual representation of the *call graph* of the code that you just profiled. The "root" of the tree is at the bottom; if you move your mouse over the long horizontal magenta bar at the bottom, you'll see it's an anonymous function in `REPL.jl`; the orangish one above that is `eval_user_input` in the same function. As is explained [elsewhere](http://docs.julialang.org/en/latest/stdlib/profile/), these are what run your code in the REPL. If you move your mouse upwards, you'll eventually get to the function(s) you ran with `@profile`.
+(Note that collected profiles can vary from run-to-run, so don't be alarmed
+if you get something different.)
+This plot is a visual representation of the *call graph* of the code that you just profiled.
+The "root" of the tree is at the bottom; if you move your mouse the long horizontal
+bars near the bottom, you should fine one for `eval_user_input` in REPL.jl.
+As is explained [elsewhere](http://docs.julialang.org/en/latest/stdlib/profile/),
+these are what run your code in the REPL.
+If you move your mouse upwards, you'll eventually get to the function(s) you ran with `@profile`.
 
 While the vertical axis therefore represents nesting depth, the
 horizontal axis represents the amount of time (more precisely, the
 number of backtraces) spent at each line.  One sees on the 4th line
 from the bottom, there are several differently-colored bars, each
 corresponding to a different line of `profile_test`. The fact that
-they are all positioned on top of the lower magenta bar means that all
+they are all positioned on top of the lower peach-colored bar means that all
 of these lines are called by the same "parent" function. Within a
 block of code, they are sorted in order of increasing line number, to
 make it easier for you to compare to the source code.
@@ -89,67 +79,37 @@ make it easier for you to compare to the source code.
 From this visual representation, we can very quickly learn several
 things about this function:
 
-- The most deeply-nested line corresponds to `mapslices(sort, B, 1)`,
-  resulting in the tall "stack" of bars on the right edge. However,
-  this call does not take much time, because these bars are narrow
-  horizontally.
+- The most deeply-nested call corresponds to the `mapslices(sort, B; dims=1)` call.
+  (If you hover over the top-most bars you will see they correspond to lines in `sort.jl`.)
+  In contrast, the call to `maximum` (the lowest blue bar) resolves to just two (non-inlined) calls.
 
-- In contrast, the two most time-consuming operations are the calls to
-  `fft` and `mapslices(sum, A, 2)`. (This is more time-consuming than
-  the `mapslices(sort,...)` simply because it has to process more
+- `mapslices(sum, A; dims=2)` is considerably more expensive than
+  `mapslices(sort, B; dims=1)`. (This is because it has to process more
   data.)
 
-One thing we haven't yet discussed is the difference between the red
-bars and the more pastel-colored bars. To explore this difference,
-let's consider a different function:
-
-```julia
-unstable(x) = x > 0.5 ? true : 0.0
-
-function profile_unstable_test(m, n)
-    s = s2 = 0
-    for i = 1:n
-        for k = 1:m
-            s += unstable(rand())
-        end
-        x = collect(1:20)
-        s2 += sum(x)
-    end
-    s, s2
-end
-
-profile_unstable_test(1, 1)
-Profile.clear()
-@profile profile_unstable_test(10, 10^6)
-ProfileView.view()
-```
-
-The main thing to note about this function is that the function
-`unstable` does not have inferrable return type (a.k.a., it is
-type-unstable); it can return either a `Bool` or a `Float64` depending
-on the *value* (not type) of `x`.  When we visualize the profiling
-results for this function, we see something like the following:
-
-![ProfileView](readme_images/pv2.jpg)
-
-In this plot, red is a special color: it is reserved for function
-calls that are deduced to be non-inferrable (by virtue of their
+It is also worth noting that red is a special color: it is reserved for function
+calls that have to be resolved at run-time (by virtue of their
 execution of the C functions `jl_invoke` or
-`jl_apply_generic`). Because type-instability often has a significant
+`jl_apply_generic`). Because run-time dispatch (aka, run-time method lookup or
+a virtual call) often has a significant
 impact on performance, we highlight the problematic call in red. It's
 worth noting that some red is unavoidable; for example, the REPL can't
 predict in advance the return types from what users type at the
-prompt. Red bars are problematic only when they account for a sizable
+prompt, and so `eval_user_input` is red.
+Red bars are problematic only when they account for a sizable
 fraction of the top "row," as only in such cases are they likely to be
-the source of a significant performance bottleneck. In our first
-example, we can see that `mapslices` is (internally) non-inferrable;
+the source of a significant performance bottleneck.
+We can see that `mapslices` relies on run-time dispatch;
 from the absence of pastel-colored bars above much of the red, we
-might guess that this type-instability makes a substantial
+might guess that this makes a substantial
 contribution to its total run time.
 
 ## GUI features
 
 ### Gtk Interface
+
+- Ctrl-q and Ctrl-w close the window. You can also use
+  `ProfileView.closeall()` to close all windows opened by ProfileView.
 
 - Left-clicking on a bar will cause information about this line to be
   printed in the REPL. This can be a convenient way to "mark" lines
@@ -164,7 +124,7 @@ contribution to its total run time.
   with CTRL-scroll. You can also use your keyboard (arrow keys, plus
   SHIFT and CTRL modifiers). Double-click to restore the full view.
 
-- To use the Gtk interface in IJulia, set `PROFILEVIEW_USEGTK = true` in
+- To use the Gtk interface in Juno or IJulia, set `PROFILEVIEW_USEGTK = true` in
   the `Main` module before `using ProfileView`.
 
 - The toolbar at the top contains two icons to load and save profile
