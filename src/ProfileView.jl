@@ -347,7 +347,7 @@ end
 function checkcontains(root, ip2so, so2ip, lidict)
     flag = contains(root, ip2so)
     if !all(flag)
-        missing = find(!flag)
+        missing = findall(!flag)
         println("missing ips:")
         for i in missing
             @show i
