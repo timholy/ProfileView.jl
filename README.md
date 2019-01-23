@@ -9,7 +9,7 @@ should see [this page](https://github.com/timholy/ProfileView.jl/tree/julia0.6).
 
 This package contains tools for visualizing profiling data collected
 with [Julia's][Julia] built-in sampling
-[profiler](http://docs.julialang.org/en/latest/stdlib/profile/). It
+[profiler][Profiling]. It
 can be helpful for getting a big-picture overview of the major
 bottlenecks in your code, and optionally highlights lines that trigger
 garbage collection as potential candidates for optimization.
@@ -62,7 +62,7 @@ if you get something different.)
 This plot is a visual representation of the *call graph* of the code that you just profiled.
 The "root" of the tree is at the bottom; if you move your mouse the long horizontal
 bars near the bottom, you should fine one for `eval_user_input` in REPL.jl.
-As is explained [elsewhere](http://docs.julialang.org/en/latest/stdlib/profile/),
+As is explained [elsewhere][Profiling],
 these are what run your code in the REPL.
 If you move your mouse upwards, you'll eventually get to the function(s) you ran with `@profile`.
 
@@ -166,7 +166,7 @@ Here is the meaning of the different arguments:
 
 - `fontsize` controls the size of the font displayed as a tooltip.
 
-- `combine` is explained [elsewhere](http://docs.julialang.org/en/latest/stdlib/profile/).
+- `combine` is explained [elsewhere][Profiling].
 
 - `pruned` is a list of functions (see example) whose call tree will not be displayed. This is useful to control the output of very deep (or recursive) functions. Example: `pruned = [("sort!", "sort.jl"), ("some_function_name", "some_filename.jl")]`
 
@@ -209,3 +209,4 @@ if you've `retrieve`d stored data.
 Alternatively, run ProfileView inside an IJulia notebook and then save the notebook.
 
 [Julia]: http://julialang.org "Julia"
+[Profiling]: https://docs.julialang.org/en/latest/manual/profile/#Profiling-1
