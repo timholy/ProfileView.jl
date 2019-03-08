@@ -189,7 +189,7 @@ using JLD
 Now open a new julia session, and try the following:
 ```
 using HDF5, JLD, ProfileView
-@load "/tmp/profdata.jld"
+@load "/tmp/foo.jlprof"
 ProfileView.view(li, lidict=lidict)
 ```
 
