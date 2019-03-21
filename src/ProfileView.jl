@@ -188,7 +188,7 @@ function show(f::IO, ::MIME"image/svg+xml", pd::ProfileData)
 
     ncols, nrows = size(img)
     leftmargin = rightmargin = 10
-    width = 1200
+    width = 1000
     topmargin = 30
     botmargin = 40
     rowheight = 15
