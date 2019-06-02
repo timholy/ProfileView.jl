@@ -4,6 +4,8 @@ os:
 julia:
   - 0.7
   - 1.0
+  - 1.1
+  - 1.2
   - nightly
 notifications:
   email: false
@@ -15,5 +17,5 @@ addons:
           - libgtk-3-0
 script:
   - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
-  - julia -e 'using Pkg; Pkg.clone(pwd()); Pkg.build("ProfileView")'
-  - xvfb-run julia --check-bounds=yes -e 'using Pkg; Pkg.test("ProfileView"; coverage=true)'
+  - julia -e 'using Pkg; if VERSION >= v"1.1.0-rc1"; Pkg.build(verbose=true); else Pkg.build(); end'
+  - xvfb-run julia --check-bounds=yes --project -e 'using Pkg; Pkg.test(coverage=true)'
