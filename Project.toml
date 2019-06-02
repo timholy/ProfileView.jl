@@ -1,5 +1,6 @@
-name = "0MFdX"
-uuid = "3fb679d3-c3d3-5ab2-b8f9-d1192cd7b3b9"
+name = "ProfileView"
+uuid = "c46f51b8-102a-5cf2-8d2c-8597cb0e0da7"
+version = "0.4.0"
 
 [deps]
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"
