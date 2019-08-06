@@ -417,16 +417,16 @@ end
 
 ## A tree representation
 # Identify and counts repetitions of all unique backtraces
-function tree_aggregate(data::Vector{UInt64})
+function tree_aggregate(data::Vector{UInt})
     iz = findall(iszero, data)  # find the breaks between backtraces
-    treecount = Dict{Vector{UInt64},Int}()
+    treecount = Dict{Vector{UInt},Int}()
     istart = 1
     for iend in iz
         tmp = data[iend - 1 : -1 : istart]
         treecount[tmp] = get(treecount, tmp, 0) + 1
         istart = iend + 1
     end
-    bt = Vector{Vector{UInt64}}(undef, 0)
+    bt = Vector{Vector{UInt}}(undef, 0)
     counts = Vector{Int}(undef, 0)
     for (k, v) in treecount
         if !isempty(k)
