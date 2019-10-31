@@ -5,6 +5,21 @@ using Colors
 
 import Base: isequal, show
 
+export @profview
+
+"""
+    @profview f(args...)
+
+Clear the Profile buffer, profile `f(args...)`, and view the result graphically.
+"""
+macro profview(ex)
+    return quote
+        Profile.clear()
+        @profile $(esc(ex))
+        view()
+    end
+end
+
 include("tree.jl")
 include("pvtree.jl")
 
