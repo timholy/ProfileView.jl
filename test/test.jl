@@ -1,4 +1,3 @@
-using Profile
 using ProfileView
 
 function profile_test(n)
@@ -35,6 +34,10 @@ function profile_unstable_test(m, n)
 end
 
 profile_test(1)
+@profview profile_test(10)
+
+using Profile
+
 Profile.clear()
 @profile profile_test(10)
 ProfileView.view()

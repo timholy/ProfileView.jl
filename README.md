@@ -42,17 +42,13 @@ function profile_test(n)
     end
 end
 
-profile_test(1)  # run once to trigger compilation
-using Profile
-Profile.clear()  # in case we have any previous profiling data
-@profile profile_test(10)
+using ProfileView
+@profview profile_test(1)  # run once to trigger compilation (ignore this one)
+@profview profile_test(10)
 ```
-Now that we have profiling data, visualizing it is a simple matter:
-```
-julia> using ProfileView
 
-julia> ProfileView.view()
-```
+`@profview f(args...)` is just shorthand for `Profile.clear(); @profile f(args...); ProfileView.view()`.
+
 If you're following along, you should see something like this:
 
 ![ProfileView](readme_images/pv1.jpg)
