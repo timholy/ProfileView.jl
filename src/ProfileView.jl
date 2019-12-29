@@ -452,5 +452,7 @@ function tree_aggregate(data::Vector{UInt})
     return (bt, counts)
 end
 
+include("precompile.jl")
+_precompile_()
 
 end
