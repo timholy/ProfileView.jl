@@ -5,6 +5,27 @@ using Colors
 
 import Base: isequal, show
 
+# This allows Revise to correct the location information in profiles
+if VERSION >= v"1.5.0-DEV.9"
+    using Profile: getdict   # ref https://github.com/JuliaLang/julia/pull/34235
+else
+    # Use the definition of getdict from Julia 1.5.0-DEV.9+
+    function getdict(data::Vector{UInt})
+        # Lookup is expensive, so do it only once per ip.
+        udata = unique(data)
+        dict = Profile.LineInfoDict()
+        for ip in udata
+            st = Profile.lookup(convert(Ptr{Cvoid}, ip))
+            # To correct line numbers for moving code, put it in the form expected by
+            # Base.update_stackframes_callback[]
+            stn = map(x->(x, 1), st)
+            try Base.invokelatest(Base.update_stackframes_callback[], stn) catch end
+            dict[UInt64(ip)] = map(first, stn)
+        end
+        return dict
+    end
+end
+
 export @profview
 
 """
@@ -113,8 +134,8 @@ function prepare_data(data, lidict)
     # Do code address lookups on all unique instruction pointers
     uip = unique(vcat(bt...))
     if lidict == nothing
-        lkup = Vector{StackTraces.StackFrame}[Profile.lookup(ip) for ip in uip]
-        lidict = Dict(zip(uip, lkup))
+        lidict = getdict(uip)
+        lkup = map(ip->lidict[ip], uip)
     else
         lkup = [lidict[ip] for ip in uip]
     end

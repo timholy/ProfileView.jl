@@ -166,6 +166,14 @@ Here is the meaning of the different arguments:
 
 - `pruned` is a list of functions (see example) whose call tree will not be displayed. This is useful to control the output of very deep (or recursive) functions. Example: `pruned = [("sort!", "sort.jl"), ("some_function_name", "some_filename.jl")]`
 
+## Source locations & Revise (new in ProfileView 0.5.3)
+
+Profiling and [Revise](https://github.com/timholy/Revise.jl) are natural partners,
+as together they allow you to iteratively improve the performance of your code.
+If you use Revise and are tracking the source files (either as a package or with `includet`),
+the source locations (file and line number) reported by ProfileView
+will match the current code at the time the window is created.
+
 ### Saving profile data manually
 
 If you're using the Gtk backend, the easiest approach is to click on
