@@ -13,6 +13,8 @@ using Gtk.GConstants.GdkModifierType: SHIFT, CONTROL, MOD1
 
 export @profview
 
+svgwrite(args...; kwargs...) = error("SVG support has moved to the ProfileSVG package")
+
 mutable struct ZoomCanvas
     bb::BoundingBox  # in user-coordinates
     c::Canvas
