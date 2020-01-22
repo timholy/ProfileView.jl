@@ -184,15 +184,15 @@ function viewprof(fcolor, c, g; fontsize=14)
     return nothing
 end
 
-function open_cb(::Ptr, settings::Tuple)
-    C, kwargs = settings
+@guarded function open_cb(::Ptr, settings::Tuple)
+    c, kwargs = settings
     selection = open_dialog("Load profile data", toplevel(c), ("*.jlprof","*"))
     isempty(selection) && return nothing
     data, lidict = load(File(format"JLD", selection), "li", "lidict")
-    return view(data; lidict=lidict, C=C, kwargs...)
+    return view(data; lidict=lidict, kwargs...)
 end
 
-function save_as_cb(::Ptr, profdata::Tuple)
+@guarded function save_as_cb(::Ptr, profdata::Tuple)
     c, data, lidict = profdata
     selection = save_dialog("Save profile data as JLD file", toplevel(c), ("*.jlprof",))
     isempty(selection) && return nothing
