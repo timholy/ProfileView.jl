@@ -110,6 +110,8 @@ end
 function viewprof(fcolor, c, g; fontsize=14)
     img = flamepixels(fcolor, g)
     tagimg = flametags(g, img)
+    # The first column corresponds to the bottom row, which is our fake root node. Get rid of it.
+    img, tagimg = img[:,2:end], tagimg[:,2:end]
     img24 = reverse(RGB24.(img), dims=2)
     fv = XY(0.0..size(img24,1), 0.0..size(img24,2))
     zr = Signal(ZoomRegion(fv, fv))
