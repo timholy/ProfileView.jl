@@ -118,13 +118,15 @@ contribution to its total run time.
   for later investigation.
 
 - Right-clicking on a bar calls the `edit()` function to open the line
-  in an editor
+  in an editor.  (On a trackpad, use a 2-fingered tap.)
 
-- CTRL-click lets you zoom in on a specific region of the image, and
-  click-drag lets you pan the view. You can pan by scrolling the mouse
-  (scroll=vertical, SHIFT-scroll=horizontal), and change zoom level
-  with CTRL-scroll. You can also use your keyboard (arrow keys, plus
-  SHIFT and CTRL modifiers). Double-click to restore the full view.
+- CTRL-clicking and dragging will zoom in on a specific region of the image.  You
+  can also control the zoom level with CTRL-scroll (or CTRL-swipe up/down).
+
+  CTRL-double-click to restore the full view.
+
+- You can pan the view by clicking and dragging, or by scrolling your
+  mouse/trackpad (scroll=vertical, SHIFT-scroll=horizontal).
 
 ## Command-line options
 
