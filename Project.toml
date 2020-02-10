@@ -1,7 +1,7 @@
 name = "ProfileView"
 uuid = "c46f51b8-102a-5cf2-8d2c-8597cb0e0da7"
 author = ["Tim Holy <tim.holy@gmail.com>"]
-version = "0.6.2"
+version = "0.6.3"
 
 [deps]
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"
@@ -21,7 +21,7 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 Cairo = "0.6, 0.8, 1"
 Colors = "0.9, 0.10, 0.11"
 FileIO = "1"
-FlameGraphs = "0.1"
+FlameGraphs = "0.2"
 Graphics = "0.4, 1"
 Gtk = "0.18, 1"
 GtkReactive = "0.7, 1"
