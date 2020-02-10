@@ -128,6 +128,16 @@ contribution to its total run time.
 - You can pan the view by clicking and dragging, or by scrolling your
   mouse/trackpad (scroll=vertical, SHIFT-scroll=horizontal).
 
+- The toolbar at the top contains two icons to load and save profile
+  data, respectively.  Clicking the save icon will prompt you for a
+  filename; you should use extension `*.jlprof` for any file you save.
+  Launching `ProfileView.view(nothing)` opens a blank
+  window, which you can populate with saved data by clicking on the
+  "open" icon.
+
+**NOTE**: ProfileView does not support the old JLD-based `*.jlprof` files anymore.
+Use the format provided by FlameGraphs v0.2 and higher.
+
 ## Command-line options
 
 The `view` command has the following syntax:
