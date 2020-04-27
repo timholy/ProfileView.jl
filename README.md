@@ -54,10 +54,10 @@ This plot is a visual representation of the *call graph* of the code that you ju
 The "root" of the tree is at the bottom; if you move your mouse along the long horizontal
 bar at the bottom, you'll see a tooltip that's something like
 ```
-boot.jl, eval: 330
+boot.jl, eval: 331
 ```
 This refers to one of Julia's own source files, [base/boot.jl][bootjl].
-`eval` is the name of the function being executed, and `330` is the line number of the file.
+`eval` is the name of the function being executed, and `331` is the line number of the file.
 This is the function that evaluated your `profile_test(10)` command that you typed at the REPL.
 (Indeed, to reduce the amount of internal "overhead" in the flamegraph, some of these internals are truncated; see the `norepl` option of `FlameGraphs.flamegraph`.)
 If you move your mouse upwards, you'll then see bars corresponding to the function(s) you ran with `@profview` (in this case, `profile_test`).
