@@ -7,15 +7,9 @@
 
 # Introduction
 
-This package contains tools for visualizing profiling data collected
-with [Julia's][Julia] built-in sampling
-[profiler][Profiling]. It
-can be helpful for getting a big-picture overview of the major
-bottlenecks in your code, and optionally highlights lines that trigger
-garbage collection as potential candidates for optimization.
+This package contains tools for visualizing profiling data collected with [Julia's][Julia] built-in sampling [profiler][Profiling]. It can be helpful for getting a big-picture overview of the major bottlenecks in your code, and optionally highlights lines that trigger garbage collection as potential candidates for optimization.
 
-This type of plot is known as a [flame
-graph](https://github.com/brendangregg/FlameGraph).
+This type of plot is known as a [flame graph](https://github.com/brendangregg/FlameGraph).
 The main logic is handled by the [FlameGraphs][FlameGraphs] package; this package is just a visualization front-end.
 
 ## Installation
@@ -28,8 +22,7 @@ Pkg.add("ProfileView")
 
 ## Usage and visual interpretation
 
-To demonstrate ProfileView, first we have to collect some profiling
-data. Here's a simple test function for demonstration:
+To demonstrate ProfileView, first we have to collect some profiling data. Here's a simple test function for demonstration:
 
 ```julia
 function profile_test(n)
@@ -74,14 +67,12 @@ The horizontal axis represents the amount of time (more precisely, the
 number of backtraces) spent at each line.  The row at which the single
 long bar breaks up into multiple different-colored bars corresponds
 to the execution of different lines from `profile_test`.
-The fact that
-they are all positioned on top of the lower peach-colored bar means that all
+The fact that they are all positioned on top of the lower peach-colored bar means that all
 of these lines are called by the same "parent" function. Within a
 block of code, they are sorted in order of increasing line number, to
 make it easier for you to compare to the source code.
 
-From this visual representation, we can very quickly learn several
-things about this function:
+From this visual representation, we can very quickly learn several things about this function:
 
 - On the right side, you see a stack of calls to functions in `sort.jl`.
   This is because sorting is implemented using recursion (functions that call themselves).
@@ -103,8 +94,7 @@ fraction of the top of a call stack, as only in such cases are they likely to be
 the source of a significant performance bottleneck.
 We can see that `mapslices` relies on run-time dispatch;
 from the absence of pastel-colored bars above much of the red, we
-might guess that this makes a substantial
-contribution to its total run time.
+might guess that this makes a substantial contribution to its total run time.
 
 ## GUI features
 
@@ -142,7 +132,7 @@ Use the format provided by FlameGraphs v0.2 and higher.
 
 The `view` command has the following syntax:
 ```
-function view([fcolor,] data = Profile.fetch(); lidict = nothing, C = false, fontsize = 14, kwargs...)
+function view([fcolor,] data = Profile.fetch(); lidict = nothing, C = false, fontsize = 30, kwargs...)
 ```
 Here is the meaning of the different arguments:
 
