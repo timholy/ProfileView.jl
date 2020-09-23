@@ -52,4 +52,10 @@ Profile.clear()
 @profile profile_unstable_test(10, 10^6)
 ProfileView.view()
 
+ProfileView.view(ProfileView.FlameGraphs.flamegraph())
+
+data, lidict = Profile.retrieve()
+ProfileView.view(data, lidict=lidict)
+
+
 ProfileView.closeall()
