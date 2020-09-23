@@ -84,6 +84,9 @@ end
 # This method allows user to open a *.jlprof file
 view(::Nothing; kwargs...) = view(FlameGraphs.default_colors, Node(NodeData(StackTraces.UNKNOWN, 0, 1:0)); kwargs...)
 
+function view(g::Node{NodeData}; kwargs...)
+    view(FlameGraphs.default_colors, g; kwargs...)
+end
 function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, kwargs...)
     gsig = Signal(g)  # allow substitution by the open dialog
     # Display in a window
