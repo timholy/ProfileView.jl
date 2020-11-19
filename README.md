@@ -175,7 +175,7 @@ will match the current code at the time the window is created.
 
 
 [Julia]: http://julialang.org "Julia"
-[Profiling]: https://docs.julialang.org/en/latest/manual/profile/#Profiling-1
+[Profiling]: https://docs.julialang.org/en/v1/manual/profile/
 [FlameGraphs]: https://github.com/timholy/FlameGraphs.jl
 [pkg]: https://docs.julialang.org/en/latest/stdlib/Pkg/
 [bootjl]: https://github.com/JuliaLang/julia/blob/2e6715c045042e1c8ae9adc7a578340649b0ad5a/base/boot.jl#L330
