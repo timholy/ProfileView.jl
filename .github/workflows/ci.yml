@@ -14,11 +14,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        julia-version: ['1.0', '1', 'nightly']
+        version: ['1.0', '1', 'nightly']
         os: [windows-latest, macOS-latest]
         include:
           - os: ubuntu-latest
-            julia-version: ['1.0', '1', 'nightly']
+            version: ['1.0', '1', 'nightly']
             prefix: 'xvfb-run'
     steps:
       - uses: actions/checkout@v2
