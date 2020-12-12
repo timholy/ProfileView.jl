@@ -1,14 +1,5 @@
 using ProfileView
 
-# When running the tests on CI, we're headless which causes some trouble
-# Original source posted by David Anthoff in https://github.com/julia-actions/julia-runtest/issues/3
-if haskey(ENV, "GITHUB_ACTIONS") && ENV["GITHUB_ACTIONS"] == "true"
-    if Sys.islinux()
-        run(Cmd(`Xvfb :99 -screen 0 1024x768x24`), wait=false)
-        ENV["DISPLAY"] = ":99"
-    end
-end
-
 function profile_test(n)
     for i = 1:n
         A = randn(100,100,20)
