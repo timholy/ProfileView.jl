@@ -39,9 +39,6 @@ jobs:
             ${{ runner.os }}-test-
             ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@v1
-      - name: install xvfb
-        if: ${{ matrix.os == 'ubuntu-latest' }}
-        run: sudo apt-get install xvfb
       - uses: julia-actions/julia-runtest@prefix
         with:
           prefix: xvfb-run
