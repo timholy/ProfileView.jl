@@ -14,11 +14,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        version: ['1.0', '1', 'nightly']
         os: [windows-latest, macOS-latest]
+        version: ['1.0', '1', 'nightly']
+        arch: x64
         include:
           - os: ubuntu-latest
             version: ['1.0', '1', 'nightly']
+            arch: x64
             prefix: 'xvfb-run'
     steps:
       - uses: actions/checkout@v2
