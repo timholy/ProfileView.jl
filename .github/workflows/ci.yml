@@ -23,7 +23,6 @@ jobs:
         exclude:
           - os: macOS-latest      # Cairo fails to build properly on this combination
             version: '1.0'
-        exclude:
           - os: windows-latest    # Gtk fails to build properly on this combination
             version: '1.0'
     steps:
