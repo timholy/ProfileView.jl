@@ -20,6 +20,9 @@ jobs:
         include:
           - os: ubuntu-latest
             prefix: xvfb-run
+        exclude:
+          - os: macOS-latest    # Cairo fails to build properly on this combination
+            version: '1.0'
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
