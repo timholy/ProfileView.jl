@@ -14,14 +14,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macOS-latest]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
         version: ['1.0', '1', 'nightly']
         arch: [x64]
         include:
           - os: ubuntu-latest
-            version: '1'
-            arch: x64
-            prefix: 'xvfb-run'
+            prefix: xvfb-run
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
@@ -40,8 +38,6 @@ jobs:
             ${{ runner.os }}-
       - uses: julia-actions/julia-buildpkg@v1
       - uses: julia-actions/julia-runtest@prefix
-        with:
-          prefix: xvfb-run
       - uses: julia-actions/julia-processcoverage@v1
       - uses: codecov/codecov-action@v1
         with:
