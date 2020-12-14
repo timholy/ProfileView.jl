@@ -21,7 +21,10 @@ jobs:
           - os: ubuntu-latest
             prefix: xvfb-run
         exclude:
-          - os: macOS-latest    # Cairo fails to build properly on this combination
+          - os: macOS-latest      # Cairo fails to build properly on this combination
+            version: '1.0'
+        exclude:
+          - os: windows-latest    # Gtk fails to build properly on this combination
             version: '1.0'
     steps:
       - uses: actions/checkout@v2
