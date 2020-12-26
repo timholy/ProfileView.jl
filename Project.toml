@@ -1,7 +1,7 @@
 name = "ProfileView"
 uuid = "c46f51b8-102a-5cf2-8d2c-8597cb0e0da7"
 author = ["Tim Holy <tim.holy@gmail.com>"]
-version = "0.6.8"
+version = "0.6.9"
 
 [deps]
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"
