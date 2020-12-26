@@ -197,7 +197,11 @@ function viewprof(fcolor, c, gsig; fontsize=14)
                 sf = gettag(tagimg, xu, yu)
                 if sf != StackTraces.UNKNOWN
                     if btn.button == 1
-                        println(sf.file, ", ", sf.func, ": line ", sf.line)
+                        if sf.linfo isa Core.MethodInstance
+                            println(sf.file, ':', sf.line, ", ", sf.linfo)
+                        else
+                            println(sf.file, ':', sf.line, ", ", sf.func, " [inlined]")
+                        end
                     elseif btn.button == 3
                         edit(string(sf.file), sf.line)
                     end
