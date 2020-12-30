@@ -6,10 +6,11 @@ end
 
 using Profile
 using FlameGraphs
+using FlameGraphs.IndirectArrays
 using Base.StackTraces: StackFrame
 using MethodAnalysis
 using InteractiveUtils
-using Gtk.ShortNames, GtkReactive, Colors, FileIO, IntervalSets
+using Gtk.ShortNames, GtkObservables, Colors, FileIO, IntervalSets
 import Cairo
 using Graphics
 
@@ -59,7 +60,8 @@ function closeall()
     for (w, _) in window_wrefs
         destroy(w)
     end
-    nothing
+    empty!(window_wrefs)   # see precompile.jl's usage of closeall
+    return nothing
 end
 
 const window_wrefs = WeakKeyDict{Gtk.GtkWindowLeaf,Nothing}()
@@ -95,13 +97,19 @@ function view(; kwargs...)
 end
 
 # This method allows user to open a *.jlprof file
-view(::Nothing; kwargs...) = view(FlameGraphs.default_colors, Node(NodeData(StackTraces.UNKNOWN, 0, 1:0)); kwargs...)
+viewblank() = (FlameGraphs.default_colors, Node(NodeData(StackTraces.UNKNOWN, 0, 1:0)))
+view(::Nothing; kwargs...) = view(viewblank()...; kwargs...)
 
 function view(g::Node{NodeData}; kwargs...)
     view(FlameGraphs.default_colors, g; kwargs...)
 end
-function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, windowname="Profile", kwargs...)
-    gsig = Signal(g)  # allow substitution by the open dialog
+function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, kwargs...)
+    win, _ = viewgui(fcolor, g; data=data, lidict=lidict, kwargs...)
+    Gtk.showall(win)
+end
+
+function viewgui(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, windowname="Profile", kwargs...)
+    gsig = Observable(g)  # allow substitution by the open dialog
     # Display in a window
     c = canvas(UserUnit)
     set_gtk_property!(widget(c), :expand, true)
@@ -119,7 +127,7 @@ function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, windownam
     signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict))
     win = Window(windowname, 800, 600)
     push!(win, bx)
-    GtkReactive.gc_preserve(win, c)
+    GtkObservables.gc_preserve(win, c)
     # Register the window with closeall
     window_wrefs[win] = nothing
     signal_connect(win, :destroy) do w
@@ -127,7 +135,7 @@ function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, windownam
     end
 
     fdraw = viewprof(fcolor, c, gsig; kwargs...)
-    GtkReactive.gc_preserve(win, fdraw)
+    GtkObservables.gc_preserve(win, fdraw)
 
     # Ctrl-w and Ctrl-q destroy the window
     signal_connect(win, "key-press-event") do w, evt
@@ -137,10 +145,18 @@ function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, windownam
         end
     end
 
-    Gtk.showall(win)
+    return win, c, fdraw
 end
 
 function viewprof(fcolor, c, gsig; fontsize=14)
+    obs = on(gsig) do g
+        viewprof_func(fcolor, c, g, fontsize)
+    end
+    gsig[] = gsig[]
+    return obs
+end
+
+function viewprof_func(fcolor, c, g, fontsize)
     # From a given position, find the underlying tag
     function gettag(tagimg, xu, yu)
         x = ceil(Int, Float64(xu))
@@ -150,20 +166,22 @@ function viewprof(fcolor, c, gsig; fontsize=14)
         y = max(1, min(y, Y))
         tagimg[x,Y-y+1]
     end
-    map(gsig) do g
-        isempty(g.data.span) && return nothing
-        img = flamepixels(fcolor, g)
-        tagimg = flametags(g, img)
-        # The first column corresponds to the bottom row, which is our fake root node. Get rid of it.
-        img, tagimg = img[:,2:end], tagimg[:,2:end]
-        img24 = reverse(RGB24.(img), dims=2)
-        fv = XY(0.0..size(img24,1), 0.0..size(img24,2))
-        zr = Signal(ZoomRegion(fv, fv))
-        sigrb = init_zoom_rubberband(c, zr)
-        sigpd = init_pan_drag(c, zr)
-        sigzs = init_zoom_scroll(c, zr)
-        sigps = init_pan_scroll(c, zr)
-        surf = Cairo.CairoImageSurface(img24)
+    isempty(g.data.span) && return nothing
+    img = flamepixels(fcolor, g)
+    tagimg = flametags(g, img)
+    # The first column corresponds to the bottom row, which is our fake root node. Get rid of it.
+    img, tagimg = img[:,2:end], discardfirstcol(tagimg)
+    img24 = RGB24.(img)
+    img24 = img24[:,end:-1:1]
+    fv = XY(0.0..size(img24,1), 0.0..size(img24,2))
+    zr = Observable(ZoomRegion(fv, fv))
+    sigrb = init_zoom_rubberband(c, zr)
+    sigpd = init_pan_drag(c, zr)
+    sigzs = init_zoom_scroll(c, zr)
+    sigps = init_pan_scroll(c, zr)
+    surf = Cairo.CairoImageSurface(img24)
+    append!(c.preserved, Any[sigrb, sigpd, sigzs, sigps])
+    let tagimg=tagimg    # julia#15276
         sigredraw = draw(c, zr) do widget, r
             ctx = getgc(widget)
             set_coordinates(ctx, r)
@@ -173,15 +191,15 @@ function viewprof(fcolor, c, gsig; fontsize=14)
             Cairo.pattern_set_filter(p, Cairo.FILTER_NEAREST)
             fill(ctx)
         end
-        lasttextbb = BoundingBox(1,0,1,0)
-        sigmotion = map(c.mouse.motion) do btn
+        lasttextbb = Ref(BoundingBox(1,0,1,0))
+        sigmotion = on(c.mouse.motion) do btn
             # Repair image from ovewritten text
             if c.widget.is_realized && c.widget.is_sized
                 ctx = getgc(c)
-                if Graphics.width(lasttextbb) > 0
-                    r = value(zr)
+                if Graphics.width(lasttextbb[]) > 0
+                    r = zr[]
                     set_coordinates(ctx, r)
-                    rectangle(ctx, lasttextbb)
+                    rectangle(ctx, lasttextbb[])
                     set_source(ctx, surf)
                     p = Cairo.get_source(ctx)
                     Cairo.pattern_set_filter(p, Cairo.FILTER_NEAREST)
@@ -194,16 +212,16 @@ function viewprof(fcolor, c, gsig; fontsize=14)
                     str = string(basename(string(sf.file)), ", ", sf.func, ": line ", sf.line)
                     set_source(ctx, fcolor(:font))
                     Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
-                    xi = value(zr).currentview.x
+                    xi = zr[].currentview.x
                     xmin, xmax = minimum(xi), maximum(xi)
-                    lasttextbb = deform(Cairo.text(ctx, xu, yu, str, halign = xu < (2xmin+xmax)/3 ? "left" : xu < (xmin+2xmax)/3 ? "center" : "right"), -2, 2, -2, 2)
+                    lasttextbb[] = deform(Cairo.text(ctx, xu, yu, str, halign = xu < (2xmin+xmax)/3 ? "left" : xu < (xmin+2xmax)/3 ? "center" : "right"), -2, 2, -2, 2)
                 end
                 reveal(c)
             end
         end
         # Left-click prints the full path, function, and line to the console
         # Right-click calls the edit() function
-        sigshow = map(c.mouse.buttonpress) do btn
+        sigshow = on(c.mouse.buttonpress) do btn
             if btn.button == 1 || btn.button == 3
                 ctx = getgc(c)
                 xu, yu = btn.position.x, btn.position.y
@@ -222,16 +240,16 @@ function viewprof(fcolor, c, gsig; fontsize=14)
                 end
             end
         end
-        append!(c.preserved, [sigrb, sigpd, sigzs, sigps, sigredraw, sigmotion, sigshow])
-        return nothing
+        append!(c.preserved, Any[sigredraw, sigmotion, sigshow])
     end
+    return nothing
 end
 
 @guarded function open_cb(::Ptr, settings::Tuple)
     c, gsig, kwargs = settings
     selection = open_dialog("Load profile data", toplevel(c), ("*.jlprof","*"))
     isempty(selection) && return nothing
-    data, lidict = load(selection)
+    data, lidict = load(selection)::Tuple{Vector{UInt64},Profile.LineInfoDict}
     push!(gsig, flamegraph(data; lidict=lidict, kwargs...))
     return nothing
 end
@@ -244,7 +262,10 @@ end
     return nothing
 end
 
-# include("precompile.jl")
-# _precompile_()
+discardfirstcol(A) = A[:,2:end]
+discardfirstcol(A::IndirectArray) = IndirectArray(A.index[:,2:end], A.values)
+
+include("precompile.jl")
+Base.VERSION >= v"1.4.2" && _precompile_()
 
 end
