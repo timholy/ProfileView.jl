@@ -52,7 +52,7 @@ end
 const window_wrefs = WeakKeyDict{Gtk.GtkWindowLeaf,Nothing}()
 
 """
-    ProfileView.view([fcolor], data=Profile.fetch(); lidict=nothing, C=false, recur=:off, fontsize=14, kwargs...)
+    ProfileView.view([fcolor], data=Profile.fetch(); lidict=nothing, C=false, recur=:off, fontsize=30, kwargs...)
 
 View profiling results. `data` and `lidict` must be a matched pair from `Profile.retrieve()`.
 You have several options to control the output, of which the major ones are:
