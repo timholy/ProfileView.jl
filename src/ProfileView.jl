@@ -17,6 +17,8 @@ using Gtk.GConstants.GdkModifierType: SHIFT, CONTROL, MOD1
 
 export @profview
 
+const clicked = Ref{Any}(nothing)   # for getting access to the clicked bar
+
 svgwrite(args...; kwargs...) = error("SVG support has moved to the ProfileSVG package")
 
 mutable struct ZoomCanvas
@@ -195,6 +197,7 @@ function viewprof(fcolor, c, gsig; fontsize=14)
                 ctx = getgc(c)
                 xu, yu = btn.position.x, btn.position.y
                 sf = gettag(tagimg, xu, yu)
+                clicked[] = sf
                 if sf != StackTraces.UNKNOWN
                     if btn.button == 1
                         if sf.linfo isa Core.MethodInstance
