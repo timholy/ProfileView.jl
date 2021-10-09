@@ -51,6 +51,10 @@ using ProfileView
 
 `@profview f(args...)` is just shorthand for `Profile.clear(); @profile f(args...); ProfileView.view()`.
 
+> If you use ProfileView from VSCode you'll get an error `UndefVarError: @profview not defined`.
+> This is because VSCode defines its own `@profview`, which conflicts with ProfileView's.
+> Fix it by using `ProfileView.@profview`.
+
 If you're following along, you should see something like this:
 
 ![ProfileView](readme_images/pv1.png)
