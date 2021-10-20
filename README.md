@@ -1,6 +1,7 @@
 # ProfileView.jl
 
 [![Build Status](https://travis-ci.org/timholy/ProfileView.jl.svg)](https://travis-ci.org/timholy/ProfileView.jl)
+[![codecov](https://codecov.io/gh/timholy/ProfileView.jl/branch/master/graph/badge.svg?token=pDJCNZ7uGg)](https://codecov.io/gh/timholy/ProfileView.jl)
 [![PkgEval][pkgeval-img]][pkgeval-url]
 
 **NOTE**: Jupyter/IJulia and SVG support has migrated to the [ProfileSVG](https://github.com/timholy/ProfileSVG.jl) package.
