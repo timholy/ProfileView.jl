@@ -19,10 +19,11 @@ This type of plot is known as a [flame
 graph](https://github.com/brendangregg/FlameGraph).
 The main logic is handled by the [FlameGraphs][FlameGraphs] package; this package is just a visualization front-end.
 
-Compared to other flamegraph viewers, ProfileView adds a number of additional useful interactivity features, such as:
+Compared to other flamegraph viewers, ProfileView adds interactivity features, such as:
 
-- left-clicking to take you to the source code for a particular statement
-- analyzing inference problems via `code_warntype` for calls that may be deep in your call chain.
+- zoom, pan for exploring large flamegraphs
+- right-clicking to take you to the source code for a particular statement
+- analyzing inference problems via `code_warntype` for specific, user-selected calls
 
 These features are described in detail below.
 
@@ -158,6 +159,10 @@ at the REPL. You'll see the result of Julia's `code_warntype` for that particula
 
 - After clicking on a bar, you can type `warntype_last` and see the
   result of `code_warntype` for the call represented by that bar.
+  
+- `ProfileView.view(windowname="method1")` allows you to name your window,
+  which can help avoid confusion when opening several ProfileView windows
+  simultaneously.
 
 **NOTE**: ProfileView does not support the old JLD-based `*.jlprof` files anymore.
 Use the format provided by FlameGraphs v0.2 and higher.
