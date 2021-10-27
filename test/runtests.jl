@@ -1,4 +1,5 @@
 using ProfileView
+using Test
 
 function profile_test(n)
     for i = 1:n
@@ -52,3 +53,16 @@ ProfileView.view(data, lidict=lidict)
 
 
 ProfileView.closeall()
+
+# Test `warntype_last`
+function add2(x)
+    y = x[1] + x[2]
+    return y, backtrace()
+end
+_, bt = add2(Any[1,2])
+st = stacktrace(bt)
+ProfileView.clicked[] = st[1]
+io = IOBuffer()
+warntype_last(io)
+str = String(take!(io))
+@test occursin("Base.getindex(x, 1)::ANY", str)

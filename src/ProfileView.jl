@@ -7,6 +7,7 @@ end
 using Profile
 using FlameGraphs
 using Base.StackTraces: StackFrame
+using MethodAnalysis
 using InteractiveUtils
 using Gtk.ShortNames, GtkReactive, Colors, FileIO, IntervalSets
 import Cairo
@@ -15,9 +16,19 @@ using Graphics
 using FlameGraphs: Node, NodeData
 using Gtk.GConstants.GdkModifierType: SHIFT, CONTROL, MOD1
 
-export @profview
+export @profview, warntype_last
 
 const clicked = Ref{Any}(nothing)   # for getting access to the clicked bar
+
+"""
+    warntype_last()
+    warntype_last(io::IO; kwargs...)
+
+Show `code_warntype` for the most recently-clicked bar.
+
+Optionally direct output to stream `io`. Keyword arguments are passed to `code_warntype`.
+"""
+warntype_last(io::IO=stdout; kwargs...) = code_warntype(io, call_type(ProfileView.clicked[].linfo.specTypes)...; kwargs...)
 
 svgwrite(args...; kwargs...) = error("SVG support has moved to the ProfileSVG package")
 
