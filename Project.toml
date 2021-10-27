@@ -13,6 +13,7 @@ Gtk = "4c0ca9eb-093a-5379-98c5-f87ac0bbbf44"
 GtkReactive = "27996c0f-39cd-5cc1-a27a-05f136f946b6"
 InteractiveUtils = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 IntervalSets = "8197267c-284f-5f27-9208-e0e47529a953"
+MethodAnalysis = "85b6ec6f-f7df-4429-9514-a64bcd9ee824"
 Profile = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
@@ -25,6 +26,7 @@ Graphics = "0.4, 1"
 Gtk = "0.18, 1"
 GtkReactive = "0.7, 1"
 IntervalSets = "0.2, 0.3, 0.4, 0.5"
+MethodAnalysis = "0.4"
 julia = "1"
 
 [extras]

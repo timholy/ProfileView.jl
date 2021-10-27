@@ -8,7 +8,7 @@
 
 # Introduction
 
-This package contains tools for visualizing profiling data collected
+This package contains tools for visualizing and interacting with profiling data collected
 with [Julia's][Julia] built-in sampling
 [profiler][Profiling]. It
 can be helpful for getting a big-picture overview of the major
@@ -19,6 +19,13 @@ This type of plot is known as a [flame
 graph](https://github.com/brendangregg/FlameGraph).
 The main logic is handled by the [FlameGraphs][FlameGraphs] package; this package is just a visualization front-end.
 
+Compared to other flamegraph viewers, ProfileView adds a number of additional useful interactivity features, such as:
+
+- left-clicking to take you to the source code for a particular statement
+- analyzing inference problems via `code_warntype` for calls that may be deep in your call chain.
+
+These features are described in detail below.
+
 ## Installation
 
 Within Julia, use the [package manager][pkg]:
@@ -27,7 +34,7 @@ using Pkg
 Pkg.add("ProfileView")
 ```
 
-## Usage and visual interpretation
+## Tutorial: usage and visual interpretation
 
 To demonstrate ProfileView, first we have to collect some profiling
 data. Here's a simple test function for demonstration:
@@ -111,6 +118,15 @@ from the absence of pastel-colored bars above much of the red, we
 might guess that this makes a substantial
 contribution to its total run time.
 
+To determine the nature of the inference problem(s) in a red bar, left-click on it
+and then enter
+
+```julia
+julia> warntype_last()
+```
+
+at the REPL. You'll see the result of Julia's `code_warntype` for that particular call.
+
 ## GUI features
 
 ### Gtk Interface
@@ -139,6 +155,9 @@ contribution to its total run time.
   Launching `ProfileView.view(nothing)` opens a blank
   window, which you can populate with saved data by clicking on the
   "open" icon.
+
+- After clicking on a bar, you can type `warntype_last` and see the
+  result of `code_warntype` for the call represented by that bar.
 
 **NOTE**: ProfileView does not support the old JLD-based `*.jlprof` files anymore.
 Use the format provided by FlameGraphs v0.2 and higher.
