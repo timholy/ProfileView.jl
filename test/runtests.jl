@@ -12,13 +12,6 @@ function profile_test(n)
     end
 end
 
-function profile_simple_test(n)
-    for i = 1:n
-        A = randn(100,100,20)
-        m = max(A)
-    end
-end
-
 unstable(x) = x > 0.5 ? true : 0.0
 
 function profile_unstable_test(m, n)
@@ -33,6 +26,8 @@ function profile_unstable_test(m, n)
     s, s2
 end
 
+# These tests only ensure that code runs, and does not check the "output"
+
 profile_test(1)
 @profview profile_test(10)
 
@@ -43,12 +38,10 @@ Profile.clear()
 ProfileView.view()
 ProfileView.view(C=true)
 ProfileView.view(fontsize=18)
+ProfileView.view(windowname="ProfileWindow")
 
 Profile.clear()
-@profile profile_unstable_test(1, 1)
-ProfileView.view(ProfileView.FlameGraphs.StackFrameCategory())
-
-Profile.clear()
+profile_unstable_test(1, 1)
 @profile profile_unstable_test(10, 10^6)
 ProfileView.view()
 

@@ -54,7 +54,7 @@ end
 const window_wrefs = WeakKeyDict{Gtk.GtkWindowLeaf,Nothing}()
 
 """
-    ProfileView.view([fcolor], data=Profile.fetch(); lidict=nothing, C=false, recur=:off, fontsize=14, kwargs...)
+    ProfileView.view([fcolor], data=Profile.fetch(); lidict=nothing, C=false, recur=:off, fontsize=14, windowname="Profile", kwargs...)
 
 View profiling results. `data` and `lidict` must be a matched pair from `Profile.retrieve()`.
 You have several options to control the output, of which the major ones are:
@@ -89,7 +89,7 @@ view(::Nothing; kwargs...) = view(FlameGraphs.default_colors, Node(NodeData(Stac
 function view(g::Node{NodeData}; kwargs...)
     view(FlameGraphs.default_colors, g; kwargs...)
 end
-function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, kwargs...)
+function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, windowname="Profile", kwargs...)
     gsig = Signal(g)  # allow substitution by the open dialog
     # Display in a window
     c = canvas(UserUnit)
@@ -106,7 +106,7 @@ function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, kwargs...
     # FIXME: likely have to do `allkwargs` in the two below (add in C, combine, recur)
     signal_connect(open_cb, tb_open, "clicked", Nothing, (), false, (widget(c),gsig,kwargs))
     signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict))
-    win = Window("Profile", 800, 600)
+    win = Window(windowname, 800, 600)
     push!(win, bx)
     GtkReactive.gc_preserve(win, c)
     # Register the window with closeall
