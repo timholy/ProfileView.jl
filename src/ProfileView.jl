@@ -87,17 +87,22 @@ See [FlameGraphs](https://github.com/timholy/FlameGraphs.jl) for more informatio
 function view(fcolor, data::Vector{UInt64}; lidict=nothing, C=false, combine=true, recur=:off, pruned=FlameGraphs.defaultpruned, kwargs...)
     g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned)
     g === nothing && return nothing
-    return view(fcolor, g; data=data, lidict=lidict, kwargs...)
+    gdict = Dict{Symbol,Node{NodeData}}(:all => g)
+    for tid in Profile.get_thread_ids(data)
+        g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned, threads = tid)
+        gdict[Symbol(tid)] = g
+    end
+    return view(fcolor, gdict; data=data, lidict=lidict, kwargs...)
 end
 function view(fcolor; kwargs...)
-    data, lidict = Profile.retrieve()
+    data, lidict = Profile.retrieve(include_meta = true)
     view(fcolor, data; lidict=lidict, kwargs...)
 end
 function view(data::Vector{UInt64}; lidict=nothing, kwargs...)
     view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
 end
 function view(; kwargs...)
-    data, lidict = Profile.retrieve()
+    data, lidict = Profile.retrieve(include_meta = true)
     view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
 end
 
@@ -108,39 +113,47 @@ view(::Nothing; kwargs...) = view(viewblank()...; kwargs...)
 function view(g::Node{NodeData}; kwargs...)
     view(FlameGraphs.default_colors, g; kwargs...)
 end
-function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, kwargs...)
-    win, _ = viewgui(fcolor, g; data=data, lidict=lidict, kwargs...)
+function view(fcolor, gdict::Dict{Symbol,Node{NodeData}}; data=nothing, lidict=nothing, kwargs...)
+    win, _ = viewgui(fcolor, gdict; data=data, lidict=lidict, kwargs...)
     Gtk.showall(win)
 end
 
-function viewgui(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, windowname="Profile", kwargs...)
-    gsig = Observable(g)  # allow substitution by the open dialog
+function viewgui(fcolor, gdict::Dict{Symbol,Node{NodeData}}; data=nothing, lidict=nothing, windowname="Profile", kwargs...)
     # Display in a window
-    c = canvas(UserUnit)
-    set_gtk_property!(widget(c), :expand, true)
-    f = Frame(c)
+    win = Window(windowname, 800, 600)
+
     tb = Toolbar()
-    bx = Box(:v)
-    push!(bx, tb)
-    push!(bx, f)
     tb_open = ToolButton("gtk-open")
     tb_save_as = ToolButton("gtk-save-as")
     push!(tb, tb_open)
     push!(tb, tb_save_as)
-    # FIXME: likely have to do `allkwargs` in the two below (add in C, combine, recur)
-    signal_connect(open_cb, tb_open, "clicked", Nothing, (), false, (widget(c),gsig,kwargs))
-    signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict,g))
-    win = Window(windowname, 800, 600)
+
+    c, fdraw = nothing, nothing # needed for precompile helper
+    nb = Notebook()
+    for key in sort(collect(keys(gdict)))
+        gsig = Observable(gdict[key])  # allow substitution by the open dialog
+        c = canvas(UserUnit)
+        set_gtk_property!(widget(c), :expand, true)
+        f = Frame(c)
+        push!(nb, f, string(key))
+        # FIXME: likely have to do `allkwargs` in the two below (add in C, combine, recur)
+        signal_connect(open_cb, tb_open, "clicked", Nothing, (), false, (widget(c),gsig,kwargs))
+        signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict))
+        fdraw = viewprof(fcolor, c, gsig; kwargs...)
+        GtkObservables.gc_preserve(win, c)
+        GtkObservables.gc_preserve(win, fdraw)
+    end
+
+    bx = Box(:v)
+    push!(bx, tb)
+    push!(bx, nb)
     push!(win, bx)
-    GtkObservables.gc_preserve(win, c)
+
     # Register the window with closeall
     window_wrefs[win] = nothing
     signal_connect(win, :destroy) do w
         delete!(window_wrefs, win)
     end
-
-    fdraw = viewprof(fcolor, c, gsig; kwargs...)
-    GtkObservables.gc_preserve(win, fdraw)
 
     # Ctrl-w and Ctrl-q destroy the window
     signal_connect(win, "key-press-event") do w, evt
