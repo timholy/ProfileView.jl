@@ -15,16 +15,11 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
-        version: ['1.0', '1', 'nightly']
+        version: ['1.3', '1.6', '1', 'nightly']
         arch: [x64]
         include:
           - os: ubuntu-latest
             prefix: xvfb-run
-        exclude:
-          - os: macOS-latest      # Cairo fails to build properly on this combination
-            version: '1.0'
-          - os: windows-latest    # Gtk fails to build properly on this combination
-            version: '1.0'
     steps:
       - uses: actions/checkout@v2
       - uses: julia-actions/setup-julia@v1
