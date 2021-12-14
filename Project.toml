@@ -27,10 +27,11 @@ Gtk = "0.18, 1"
 GtkObservables = "1"
 IntervalSets = "0.2, 0.3, 0.4, 0.5"
 MethodAnalysis = "0.4"
-julia = "1"
+julia = "1.6"
 
 [extras]
+AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test"]
+test = ["AbstractTrees", "Test"]
