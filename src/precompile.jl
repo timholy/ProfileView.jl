@@ -1,5 +1,4 @@
 function _precompile_()
-    ccall(:jl_generating_output, Cint, ()) == 1 || return nothing
     stackframe(func, file, line; C=false) = StackFrame(Symbol(func), Symbol(file), line, nothing, C, false, 0)
     backtraces = UInt64[0, 4, 3, 2, 1,   # order: calles then caller
                         0, 6, 5, 1,

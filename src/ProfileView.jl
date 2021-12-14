@@ -271,7 +271,9 @@ end
 discardfirstcol(A) = A[:,2:end]
 discardfirstcol(A::IndirectArray) = IndirectArray(A.index[:,2:end], A.values)
 
-include("precompile.jl")
-Base.VERSION >= v"1.4.2" && _precompile_()
+if ccall(:jl_generating_output, Cint, ()) == 1
+    include("precompile.jl")
+    _precompile_()
+end
 
 end
