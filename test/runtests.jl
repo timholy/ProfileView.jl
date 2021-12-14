@@ -1,4 +1,7 @@
+using Profile
 using ProfileView
+using GtkObservables
+using AbstractTrees
 using Test
 
 function profile_test(n)
@@ -27,42 +30,96 @@ function profile_unstable_test(m, n)
     s, s2
 end
 
-# These tests only ensure that code runs, and does not check the "output"
-
-profile_test(1)
-@profview profile_test(10)
-
-using Profile
-
-Profile.clear()
-@profile profile_test(10)
-ProfileView.view()
-ProfileView.view(C=true)
-ProfileView.view(fontsize=18)
-ProfileView.view(windowname="ProfileWindow")
-
-Profile.clear()
-profile_unstable_test(1, 1)
-@profile profile_unstable_test(10, 10^6)
-ProfileView.view()
-
-ProfileView.view(ProfileView.FlameGraphs.flamegraph())
-
-data, lidict = Profile.retrieve()
-ProfileView.view(data, lidict=lidict)
-
-
-ProfileView.closeall()
-
-# Test `warntype_last`
 function add2(x)
     y = x[1] + x[2]
     return y, backtrace()
 end
-_, bt = add2(Any[1,2])
-st = stacktrace(bt)
-ProfileView.clicked[] = st[1]
-io = IOBuffer()
-warntype_last(io)
-str = String(take!(io))
-@test occursin("Base.getindex(x, 1)::ANY", str)
+
+_click(b) = ccall((:gtk_button_clicked,ProfileView.Gtk.libgtk),Nothing,(Ptr{ProfileView.Gtk.GObject},),b)
+
+@testset "ProfileView" begin
+    @testset "windows" begin
+        profile_test(1)
+        @test isa(@profview(profile_test(10)), ProfileView.Window)
+        data, lidict = Profile.retrieve()
+
+        Profile.clear()
+        @profile profile_test(10)
+        @test isa(ProfileView.view(), ProfileView.Window)
+        @test isa(ProfileView.view(C=true), ProfileView.Window)
+        @test isa(ProfileView.view(fontsize=18), ProfileView.Window)
+        @test isa(ProfileView.view(windowname="ProfileWindow"), ProfileView.Window)
+
+        Profile.clear()
+        profile_unstable_test(1, 1)
+        @profile profile_unstable_test(10, 10^6)
+        @test isa(ProfileView.view(), ProfileView.Window)
+
+        @test isa(ProfileView.view(ProfileView.FlameGraphs.flamegraph()), ProfileView.Window)
+        @test isa(ProfileView.view(ProfileView.FlameGraphs.FlameColors()), ProfileView.Window)
+
+        data, lidict = Profile.retrieve()
+        @test isa(ProfileView.view(data, lidict=lidict), ProfileView.Window)
+
+        @test isa(ProfileView.view(nothing), ProfileView.Window)
+
+        # Interactivity
+        stackframe(func, file, line; C=false) = ProfileView.StackFrame(Symbol(func), Symbol(file), line, nothing, C, false, 0)
+
+        backtraces = UInt64[0, 4, 3, 2, 1,   # order: calles then caller
+                            0, 6, 5, 1,
+                            0, 8, 7,
+                            0, 4, 3, 2, 1,
+                            0]
+        if isdefined(Profile, :add_fake_meta)
+            backtraces = Profile.add_fake_meta(backtraces)
+        end
+        lidict = Dict{UInt64,Vector{ProfileView.StackFrame}}(
+            1=>[stackframe(:f1, :file1, 1)],
+            2=>[stackframe(:f2, :file1, 5)],
+            3=>[stackframe(:f3, :file2, 1)],
+            4=>[stackframe(:f2, :file1, 15)],
+            5=>[stackframe(:f4, :file1, 20)],
+            6=>[stackframe(:f5, :file3, 1)],
+            7=>[stackframe(:f1, :file1, 2)],
+            8=>[stackframe(:f6, :file3, 10)])
+        g = ProfileView.flamegraph(backtraces; lidict=lidict)
+        win, c, fdraw, (tb_open, tb_save_as) = ProfileView.viewgui(ProfileView.FlameGraphs.default_colors, g);
+        ProfileView.Gtk.showall(win)
+        sleep(1.0)
+        @test c.widget.is_realized && c.widget.is_sized  # to ensure the motion test really runs
+        btn = c.mouse.motion[]
+        c.mouse.motion[] = MouseButton(XY{UserUnit}(2.8, 1.4), btn.button, btn.clicktype, btn.modifiers)
+        mktemp() do path, io
+            redirect_stdout(io) do
+                c.mouse.buttonpress[] = MouseButton(XY{UserUnit}(2.8, 1.4), 1, GtkObservables.BUTTON_PRESS, btn.modifiers)
+            end
+            flush(io)
+            @test occursin("file3:1, f5 [inlined]", read(path, String))
+        end
+        fn = tempname()
+        try
+            ProfileView._save(fn, backtraces, lidict)
+            tmp = []
+            ProfileView._open(tmp, fn)
+            for (gn, sn) in zip(PreOrderDFS(g), PreOrderDFS(tmp[1]))
+                @test gn.data == sn.data
+            end
+        finally
+            rm(fn)
+        end
+
+        ProfileView.closeall()
+    end
+
+    @testset "warntype_last" begin
+        # Test `warntype_last`
+        _, bt = add2(Any[1,2])
+        st = stacktrace(bt)
+        ProfileView.clicked[] = st[1]
+        io = IOBuffer()
+        warntype_last(io)
+        str = String(take!(io))
+        @test occursin("Base.getindex(x, 1)::ANY", str)
+    end
+end
