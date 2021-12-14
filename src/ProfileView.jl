@@ -31,8 +31,6 @@ Optionally direct output to stream `io`. Keyword arguments are passed to `code_w
 """
 warntype_last(io::IO=stdout; kwargs...) = code_warntype(io, call_type(ProfileView.clicked[].linfo.specTypes)...; kwargs...)
 
-svgwrite(args...; kwargs...) = error("SVG support has moved to the ProfileSVG package")
-
 mutable struct ZoomCanvas
     bb::BoundingBox  # in user-coordinates
     c::Canvas
@@ -145,7 +143,7 @@ function viewgui(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, window
         end
     end
 
-    return win, c, fdraw
+    return win, c, fdraw, (tb_open, tb_save_as)
 end
 
 function viewprof(fcolor, c, gsig; fontsize=14)
@@ -249,6 +247,10 @@ end
     c, gsig, kwargs = settings
     selection = open_dialog("Load profile data", toplevel(c), ("*.jlprof","*"))
     isempty(selection) && return nothing
+    return _open(gsig, selection; kwargs...)
+end
+
+function _open(gsig, selection; kwargs...)
     data, lidict = load(selection)::Tuple{Vector{UInt64},Profile.LineInfoDict}
     push!(gsig, flamegraph(data; lidict=lidict, kwargs...))
     return nothing
@@ -258,7 +260,11 @@ end
     c, data, lidict = profdata
     selection = save_dialog("Save profile data as *.jlprof file", toplevel(c), ("*.jlprof",))
     isempty(selection) && return nothing
-    FileIO.save(File(format"JLPROF", selection), data, lidict)
+    return _save(selection, data, lidict)
+end
+
+function _save(selection, data, lidict)
+    FileIO.save(File{format"JLPROF"}(selection), data, lidict)
     return nothing
 end
 

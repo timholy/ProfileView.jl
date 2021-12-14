@@ -24,8 +24,8 @@ function _precompile_()
             precompile(obs)
         end
     end
-    closeall()   # necessary to prevent serialization of stale references (including the internal `empty!`)
     precompile(fdraw)
+    closeall()   # necessary to prevent serialization of stale references (including the internal `empty!`)
     precompile(viewprof_func, (FlameColors, GtkObservables.Canvas{GtkObservables.UserUnit}, FlameGraphs.LeftChildRightSiblingTrees.Node{FlameGraphs.NodeData}, Int))
     precompile(Tuple{typeof(save_as_cb),Ptr{GObject},Tuple{Gtk.GtkCanvas, Vector{UInt64}, Dict{UInt64, Vector{StackFrame}}}})   # time: 0.008177923
     precompile(Tuple{typeof(save_as_cb),Ptr{GObject},Tuple{Gtk.GtkCanvas, Nothing, Nothing}})
