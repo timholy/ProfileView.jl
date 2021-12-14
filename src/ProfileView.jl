@@ -29,7 +29,14 @@ Show `code_warntype` for the most recently-clicked bar.
 
 Optionally direct output to stream `io`. Keyword arguments are passed to `code_warntype`.
 """
-warntype_last(io::IO=stdout; kwargs...) = code_warntype(io, call_type(ProfileView.clicked[].linfo.specTypes)...; kwargs...)
+function warntype_last(io::IO=stdout; kwargs...)
+    st = clicked[]
+    if st === nothing || st.linfo === nothing
+        @warn "click on a non-inlined bar to see `code_warntype` info"
+        return nothing
+    end
+    return code_warntype(io, call_type(st.linfo.specTypes)...; kwargs...)
+end
 
 mutable struct ZoomCanvas
     bb::BoundingBox  # in user-coordinates
