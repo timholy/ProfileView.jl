@@ -35,8 +35,6 @@ function add2(x)
     return y, backtrace()
 end
 
-_click(b) = ccall((:gtk_button_clicked,ProfileView.Gtk.libgtk),Nothing,(Ptr{ProfileView.Gtk.GObject},),b)
-
 @testset "ProfileView" begin
     @testset "windows" begin
         profile_test(1)
@@ -114,6 +112,8 @@ _click(b) = ccall((:gtk_button_clicked,ProfileView.Gtk.libgtk),Nothing,(Ptr{Prof
 
     @testset "warntype_last" begin
         # Test `warntype_last`
+        ProfileView.clicked[] = nothing
+        @test_logs (:warn, "click on a non-inlined bar to see `code_warntype` info") warntype_last() === nothing
         _, bt = add2(Any[1,2])
         st = stacktrace(bt)
         ProfileView.clicked[] = st[1]
@@ -121,5 +121,8 @@ _click(b) = ccall((:gtk_button_clicked,ProfileView.Gtk.libgtk),Nothing,(Ptr{Prof
         warntype_last(io)
         str = String(take!(io))
         @test occursin("Base.getindex(x, 1)::ANY", str)
+        idx = findfirst(sf -> sf.inlined, st)
+        ProfileView.clicked[] = st[idx]
+        @test_logs (:warn, "click on a non-inlined bar to see `code_warntype` info") warntype_last(io) === nothing
     end
 end
