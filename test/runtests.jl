@@ -90,6 +90,8 @@ _click(b) = ccall((:gtk_button_clicked,ProfileView.Gtk.libgtk),Nothing,(Ptr{Prof
         @test c.widget.is_realized && c.widget.is_sized  # to ensure the motion test really runs
         btn = c.mouse.motion[]
         c.mouse.motion[] = MouseButton(XY{UserUnit}(2.8, 1.4), btn.button, btn.clicktype, btn.modifiers)
+        # do it again to check the repair code
+        c.mouse.motion[] = MouseButton(XY{UserUnit}(2.9, 1.4), btn.button, btn.clicktype, btn.modifiers)
         mktemp() do path, io
             redirect_stdout(io) do
                 c.mouse.buttonpress[] = MouseButton(XY{UserUnit}(2.8, 1.4), 1, GtkObservables.BUTTON_PRESS, btn.modifiers)
@@ -108,6 +110,25 @@ _click(b) = ccall((:gtk_button_clicked,ProfileView.Gtk.libgtk),Nothing,(Ptr{Prof
         finally
             rm(fn)
         end
+
+        # Also click on real stackframes
+        Profile.clear()
+        @profile profile_test(10)
+        g = ProfileView.flamegraph()
+        win, c, fdraw, (tb_open, tb_save_as) = ProfileView.viewgui(ProfileView.FlameGraphs.default_colors, g);
+        ProfileView.Gtk.showall(win)
+        sleep(1.0)
+        sz = size(ProfileView.flamepixels(ProfileView.FlameGraphs.default_colors, g))
+        mktemp() do path, io
+            redirect_stdout(io) do
+                for j in 1:sz[2], i in 1:sz[1]
+                    c.mouse.buttonpress[] = MouseButton(XY{UserUnit}(j, i), 1, GtkObservables.BUTTON_PRESS, btn.modifiers)
+                end
+            end
+            flush(io)
+            @test occursin("MethodInstance", read(path, String))
+        end
+
 
         ProfileView.closeall()
     end
