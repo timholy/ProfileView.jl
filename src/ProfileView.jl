@@ -271,7 +271,8 @@ end
 end
 
 function _save(selection, data, lidict)
-    FileIO.save(File{format"JLPROF"}(selection), data, lidict)
+    args = data == nothing && lidict == nothing ? () : (data, lidict)
+    FileIO.save(File{format"JLPROF"}(selection), args...)
     return nothing
 end
 
