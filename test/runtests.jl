@@ -99,10 +99,15 @@ end
         end
         fn = tempname()
         try
+            tmp = Observable{typeof(g)}()
             ProfileView._save(fn, backtraces, lidict)
-            tmp = []
             ProfileView._open(tmp, fn)
-            for (gn, sn) in zip(PreOrderDFS(g), PreOrderDFS(tmp[1]))
+            for (gn, sn) in zip(PreOrderDFS(g), PreOrderDFS(tmp[]))
+                @test gn.data == sn.data
+            end
+            ProfileView._save(fn, g)
+            ProfileView._open(tmp, fn)
+            for (gn, sn) in zip(PreOrderDFS(g), PreOrderDFS(tmp[]))
                 @test gn.data == sn.data
             end
         finally
