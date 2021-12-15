@@ -129,7 +129,7 @@ function viewgui(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, window
     push!(tb, tb_save_as)
     # FIXME: likely have to do `allkwargs` in the two below (add in C, combine, recur)
     signal_connect(open_cb, tb_open, "clicked", Nothing, (), false, (widget(c),gsig,kwargs))
-    signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict))
+    signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict,g))
     win = Window(windowname, 800, 600)
     push!(win, bx)
     GtkObservables.gc_preserve(win, c)
@@ -258,20 +258,28 @@ end
 end
 
 function _open(gsig, selection; kwargs...)
-    data, lidict = load(selection)::Tuple{Vector{UInt64},Profile.LineInfoDict}
-    push!(gsig, flamegraph(data; lidict=lidict, kwargs...))
+    ret = load(selection)
+    if isa(ret, Node{NodeData})
+        gsig[] = ret
+    else
+        data, lidict = ret::Tuple{Vector{UInt64},Profile.LineInfoDict}
+        gsig[] = flamegraph(data; lidict=lidict, kwargs...)
+    end
     return nothing
 end
 
 @guarded function save_as_cb(::Ptr, profdata::Tuple)
-    c, data, lidict = profdata
+    c, data, lidict, g = profdata
     selection = save_dialog("Save profile data as *.jlprof file", toplevel(c), ("*.jlprof",))
     isempty(selection) && return nothing
+    if data === nothing && lidict === nothing
+        return _save(selection, g)
+    end
     return _save(selection, data, lidict)
 end
 
-function _save(selection, data, lidict)
-    FileIO.save(File{format"JLPROF"}(selection), data, lidict)
+function _save(selection, args...)
+    FileIO.save(File{format"JLPROF"}(selection), args...)
     return nothing
 end
 
