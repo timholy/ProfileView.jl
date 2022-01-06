@@ -137,6 +137,7 @@ function viewgui(fcolor, gdict::Dict{Symbol,Node{NodeData}}; data=nothing, lidic
 
     _c, _fdraw, _tb_open, _tb_save_as = nothing, nothing, nothing, nothing # needed to be returned for precompile helper
     nb = Notebook() # for holding the per-thread pages
+    Gtk.GAccessor.scrollable(nb, true)
     i = 1
     function sort_tabs(gdict::Dict{Symbol,Node{NodeData}}) # sorts tabs as [all threads, 1, 2, 3 ....]
         tabs = collect(keys(gdict))
