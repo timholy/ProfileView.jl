@@ -102,9 +102,13 @@ function view(fcolor, data::Vector{UInt64}; lidict=nothing, C=false, combine=tru
             g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned, threads = threadid)
             gdict_inner = Dict{Symbol,Node{NodeData}}(tabname_alltasks => g)
             if expand_tasks
-                for taskid in Profile.get_task_ids(data, threadid)
-                    g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned, threads = threadid, tasks = taskid)
-                    gdict_inner[Symbol(taskid)] = g
+                taskids = Profile.get_task_ids(data, threadid)
+                if length(taskids) > 1
+                    # skip when there's only one task as it will be the same as "all tasks"
+                    for taskid in taskids
+                        g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned, threads = threadid, tasks = taskid)
+                        gdict_inner[Symbol(taskid)] = g
+                    end
                 end
             end
             gdict[Symbol(threadid)] = gdict_inner
@@ -161,8 +165,8 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
         task_tabs = collect(keys(gdict_thread))
         sort!(task_tabs, by = s -> s == tabname_alltasks ? "" : string(s)) # sorts thread_tabs as [all threads, 0xds ....]
 
-        nb_tasks = if length(task_tabs) > 2
-            # only show the 2nd tab row if there is more than 1 task (more than 2 tabs)
+        nb_tasks = if length(task_tabs) > 1
+            # only show the 2nd tab row if there is more than 1 task
             nb_tasks = Notebook() # for holding the per-task pages
             Gtk.GAccessor.scrollable(nb_tasks, true)
             nb_tasks
