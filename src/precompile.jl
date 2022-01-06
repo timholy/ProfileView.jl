@@ -17,7 +17,7 @@ function _precompile_()
                                      7=>stackframe(:f1, :file1, 2),
                                      8=>stackframe(:f6, :file3, 10))
     g = flamegraph(backtraces; lidict=lidict)
-    gdict = Dict(:all => g)
+    gdict = Dict(tabname_allthreads => Dict(tabname_alltasks => g))
     win, c, fdraw = viewgui(FlameGraphs.default_colors, gdict)
     for obs in c.preserved
         if isa(obs, Observable) || isa(obs, Observables.ObserverFunction)
