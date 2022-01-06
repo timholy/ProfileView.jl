@@ -138,7 +138,13 @@ function viewgui(fcolor, gdict::Dict{Symbol,Node{NodeData}}; data=nothing, lidic
     _c, _fdraw, _tb_open, _tb_save_as = nothing, nothing, nothing, nothing # needed to be returned for precompile helper
     nb = Notebook() # for holding the per-thread pages
     i = 1
-    for key in sort(sort(collect(keys(gdict))), by = k -> isnumeric(first(string(k)))) # sort to [all, 1, 2, 3 ....]
+    function sort_tabs(gdict::Dict{Symbol,Node{NodeData}}) # sorts tabs as [all threads, 1, 2, 3 ....]
+        tabs = collect(keys(gdict))
+        _sort(s) = something(tryparse(Int, string(s)), 0)
+        sort!(tabs, by = _sort)
+        return tabs
+    end
+    for key in sort_tabs(gdict)
         g = gdict[key]
         gsig = Observable(g)  # allow substitution by the open dialog
         c = canvas(UserUnit)
