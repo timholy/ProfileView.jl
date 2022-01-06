@@ -160,8 +160,16 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
         gdict_thread = gdict[thread_tab]
         task_tabs = collect(keys(gdict_thread))
         sort!(task_tabs, by = s -> s == tabname_alltasks ? "" : string(s)) # sorts thread_tabs as [all threads, 0xds ....]
-        nb_tasks = Notebook() # for holding the per-task pages
-        Gtk.GAccessor.scrollable(nb_tasks, true)
+
+        nb_tasks = if length(task_tabs) > 2
+            # only show the 2nd tab row if there is more than 1 task (more than 2 tabs)
+            nb_tasks = Notebook() # for holding the per-task pages
+            Gtk.GAccessor.scrollable(nb_tasks, true)
+            nb_tasks
+        else
+            nothing
+        end
+
         task_tab_num = 1
         for task_tab in task_tabs
             g = gdict_thread[task_tab]
@@ -180,15 +188,22 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             bx = Box(:v)
             push!(bx, tb)
             push!(bx, f)
-            # don't use the actual taskid as the tab as it's very long
-            push!(nb_tasks, bx, task_tab_num == 1 ? task_tab : Symbol(task_tab_num - 1))
+            #
+            if nb_tasks !== nothing
+                # don't use the actual taskid as the tab as it's very long
+                push!(nb_tasks, bx, task_tab_num == 1 ? task_tab : Symbol(task_tab_num - 1))
+            else
+                push!(nb_threads, bx, string(thread_tab))
+            end
             fdraw = viewprof(fcolor, c, gsig; kwargs...)
             GtkObservables.gc_preserve(win, c)
             GtkObservables.gc_preserve(win, fdraw)
             _c, _fdraw, _tb_open, _tb_save_as = c, fdraw, tb_open, tb_save_as
             task_tab_num += 1
         end
-        push!(nb_threads, nb_tasks, string(thread_tab))
+        if nb_tasks !== nothing
+            push!(nb_threads, nb_tasks, string(thread_tab))
+        end
     end
 
     bx = Box(:v)
