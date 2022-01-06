@@ -87,10 +87,12 @@ See [FlameGraphs](https://github.com/timholy/FlameGraphs.jl) for more informatio
 function view(fcolor, data::Vector{UInt64}; lidict=nothing, C=false, combine=true, recur=:off, pruned=FlameGraphs.defaultpruned, kwargs...)
     g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned)
     g === nothing && return nothing
-    gdict = Dict{Symbol,Node{NodeData}}(:all => g)
-    for tid in Profile.get_thread_ids(data)
-        g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned, threads = tid)
-        gdict[Symbol(tid)] = g
+    gdict = Dict{Symbol,Node{NodeData}}(Symbol("All Threads") => g)
+    if isdefined(Profile, :has_meta) && Profile.has_meta(data)
+        for tid in Profile.get_thread_ids(data)
+            g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned, threads = tid)
+            gdict[Symbol(tid)] = g
+        end
     end
     return view(fcolor, gdict; data=data, lidict=lidict, kwargs...)
 end
@@ -113,39 +115,57 @@ view(::Nothing; kwargs...) = view(viewblank()...; kwargs...)
 function view(g::Node{NodeData}; kwargs...)
     view(FlameGraphs.default_colors, g; kwargs...)
 end
-function view(fcolor, gdict::Dict{Symbol,Node{NodeData}}; data=nothing, lidict=nothing, kwargs...)
-    win, _ = viewgui(fcolor, gdict; data=data, lidict=lidict, kwargs...)
+function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, kwargs...)
+    win, _ = viewgui(fcolor, g; data=data, lidict=lidict, kwargs...)
+    Gtk.showall(win)
+end
+function view(g_or_gdict::Union{Node{NodeData},Dict{Symbol,Node{NodeData}}}; kwargs...)
+    view(FlameGraphs.default_colors, g_or_gdict; kwargs...)
+end
+function view(fcolor, g_or_gdict::Union{Node{NodeData},Dict{Symbol,Node{NodeData}}}; data=nothing, lidict=nothing, kwargs...)
+    win, _ = viewgui(fcolor, g_or_gdict; data=data, lidict=lidict, kwargs...)
     Gtk.showall(win)
 end
 
+function viewgui(fcolor, g::Node{NodeData}; kwargs...)
+    gdict = Dict{Symbol,Node{NodeData}}(Symbol("All Threads") => g)
+    viewgui(fcolor, gdict; kwargs...)
+end
 function viewgui(fcolor, gdict::Dict{Symbol,Node{NodeData}}; data=nothing, lidict=nothing, windowname="Profile", kwargs...)
     # Display in a window
     win = Window(windowname, 800, 600)
 
-    tb = Toolbar()
-    tb_open = ToolButton("gtk-open")
-    tb_save_as = ToolButton("gtk-save-as")
-    push!(tb, tb_open)
-    push!(tb, tb_save_as)
-
-    c, fdraw = nothing, nothing # needed for precompile helper
-    nb = Notebook()
-    for key in sort(collect(keys(gdict)))
-        gsig = Observable(gdict[key])  # allow substitution by the open dialog
+    _c, _fdraw, _tb_open, _tb_save_as = nothing, nothing, nothing, nothing # needed to be returned for precompile helper
+    nb = Notebook() # for holding the per-thread pages
+    i = 1
+    for key in sort(sort(collect(keys(gdict))), by = k -> isnumeric(first(string(k)))) # sort to [all, 1, 2, 3 ....]
+        g = gdict[key]
+        gsig = Observable(g)  # allow substitution by the open dialog
         c = canvas(UserUnit)
         set_gtk_property!(widget(c), :expand, true)
         f = Frame(c)
-        push!(nb, f, string(key))
+        tb = Toolbar()
+        tb_open = ToolButton("gtk-open")
+        tb_save_as = ToolButton("gtk-save-as")
+        push!(tb, tb_open)
+        push!(tb, tb_save_as)
         # FIXME: likely have to do `allkwargs` in the two below (add in C, combine, recur)
         signal_connect(open_cb, tb_open, "clicked", Nothing, (), false, (widget(c),gsig,kwargs))
-        signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict))
+        signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict,g))
+        bx = Box(:v)
+        push!(bx, tb)
+        push!(bx, f)
+        push!(nb, bx, string(key))
         fdraw = viewprof(fcolor, c, gsig; kwargs...)
         GtkObservables.gc_preserve(win, c)
         GtkObservables.gc_preserve(win, fdraw)
+        if i == 1
+            _c, _fdraw, _tb_open, _tb_save_as = c, fdraw, tb_open, tb_save_as
+        end
+        i += 1
     end
 
     bx = Box(:v)
-    push!(bx, tb)
     push!(bx, nb)
     push!(win, bx)
 
@@ -163,7 +183,7 @@ function viewgui(fcolor, gdict::Dict{Symbol,Node{NodeData}}; data=nothing, lidic
         end
     end
 
-    return win, c, fdraw, (tb_open, tb_save_as)
+    return win, _c, _fdraw, (_tb_open, _tb_save_as)
 end
 
 function viewprof(fcolor, c, gsig; fontsize=14)
