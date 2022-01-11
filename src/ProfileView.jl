@@ -117,14 +117,14 @@ function view(fcolor, data::Vector{UInt64}; lidict=nothing, C=false, combine=tru
     return view(fcolor, gdict; data=data, lidict=lidict, kwargs...)
 end
 function view(fcolor; kwargs...)
-    data, lidict = Profile.retrieve(include_meta = true)
+    data, lidict = Profile.retrieve()
     view(fcolor, data; lidict=lidict, kwargs...)
 end
 function view(data::Vector{UInt64}; lidict=nothing, kwargs...)
     view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
 end
 function view(; kwargs...)
-    data, lidict = Profile.retrieve(include_meta = true)
+    data, lidict = Profile.retrieve()
     view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
 end
 
