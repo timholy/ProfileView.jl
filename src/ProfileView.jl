@@ -98,20 +98,26 @@ function view(fcolor, data::Vector{UInt64}; lidict=nothing, C=false, combine=tru
     # to track them across thread TODO: Perhaps fix that in base, so tasks keep the same id across threads?
     gdict = NestedGraphDict(tabname_allthreads => Dict{Symbol,Node{NodeData}}(tabname_alltasks => g))
     if expand_threads && isdefined(Profile, :has_meta) && Profile.has_meta(data)
-        for threadid in Profile.get_thread_ids(data)
+        dlock_outer = Base.ReentrantLock()
+        Threads.@threads for threadid in Profile.get_thread_ids(data)
             g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned, threads = threadid)
             gdict_inner = Dict{Symbol,Node{NodeData}}(tabname_alltasks => g)
             if expand_tasks
+                dlock_inner = Base.ReentrantLock()
                 taskids = Profile.get_task_ids(data, threadid)
                 if length(taskids) > 1
                     # skip when there's only one task as it will be the same as "all tasks"
-                    for taskid in taskids
+                    Threads.@threads for taskid in taskids
                         g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned, threads = threadid, tasks = taskid)
-                        gdict_inner[Symbol(taskid)] = g
+                        lock(dlock_inner) do
+                            gdict_inner[Symbol(taskid)] = g
+                        end
                     end
                 end
             end
-            gdict[Symbol(threadid)] = gdict_inner
+            lock(dlock_outer) do
+                gdict[Symbol(threadid)] = gdict_inner
+            end
         end
     end
     return view(fcolor, gdict; data=data, lidict=lidict, kwargs...)
