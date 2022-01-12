@@ -66,6 +66,7 @@ function closeall()
         destroy(w)
     end
     empty!(window_wrefs)   # see precompile.jl's usage of closeall
+    Gtk.idle(true)
     return nothing
 end
 
@@ -136,7 +137,8 @@ function viewgui(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, window
     # Register the window with closeall
     window_wrefs[win] = nothing
     signal_connect(win, :destroy) do w
-        delete!(window_wrefs, win)
+        delete!(window_wrefs, w)
+        isempty(window_wrefs) && Gtk.idle(true)
     end
 
     fdraw = viewprof(fcolor, c, gsig; kwargs...)
