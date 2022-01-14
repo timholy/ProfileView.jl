@@ -158,13 +158,11 @@ function viewgui(fcolor, g::Node{NodeData}; kwargs...)
     viewgui(fcolor, gdict; kwargs...)
 end
 function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, windowname="Profile", kwargs...)
-    # Display in a window
-    win = Window(windowname, 800, 600)
-
     _c, _fdraw, _tb_open, _tb_save_as = nothing, nothing, nothing, nothing # needed to be returned for precompile helper
+    thread_tabs = collect(keys(gdict))
     nb_threads = Notebook() # for holding the per-thread pages
     Gtk.GAccessor.scrollable(nb_threads, true)
-    thread_tabs = collect(keys(gdict))
+    Gtk.GAccessor.show_tabs(nb_threads, length(thread_tabs) > 1)
     sort!(thread_tabs, by = s -> something(tryparse(Int, string(s)), 0)) # sorts thread_tabs as [all threads, 1, 2, 3 ....]
     for thread_tab in thread_tabs
         gdict_thread = gdict[thread_tab]
@@ -181,7 +179,7 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
         end
 
         task_tab_num = 1
-        for task_tab in task_tabs
+        @sync for task_tab in task_tabs
             g = gdict_thread[task_tab]
             gsig = Observable(g)  # allow substitution by the open dialog
             c = canvas(UserUnit)
@@ -205,10 +203,13 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             else
                 push!(nb_threads, bx, string(thread_tab))
             end
-            fdraw = viewprof(fcolor, c, gsig; kwargs...)
-            GtkObservables.gc_preserve(win, c)
-            GtkObservables.gc_preserve(win, fdraw)
-            _c, _fdraw, _tb_open, _tb_save_as = c, fdraw, tb_open, tb_save_as
+            Threads.@spawn begin
+                fdraw = viewprof(fcolor, c, gsig; kwargs...)
+                GtkObservables.gc_preserve(nb_threads, c)
+                GtkObservables.gc_preserve(nb_threads, fdraw)
+                _fdraw = fdraw
+            end
+            _c, _tb_open, _tb_save_as = c, tb_open, tb_save_as
             task_tab_num += 1
         end
         if nb_tasks !== nothing
@@ -218,6 +219,9 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
 
     bx = Box(:v)
     push!(bx, nb_threads)
+
+    # Defer creating the window until here because Window includes a `show` that will unpause the Gtk eventloop
+    win = Window(windowname, 800, 600)
     push!(win, bx)
 
     # Register the window with closeall
