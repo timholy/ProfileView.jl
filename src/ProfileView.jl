@@ -148,7 +148,6 @@ end
 function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, kwargs...)
     win, _ = viewgui(fcolor, g; data=data, lidict=lidict, kwargs...)
     Gtk.showall(win)
-    nothing
 end
 function view(g_or_gdict::Union{Node{NodeData},NestedGraphDict}; kwargs...)
     view(FlameGraphs.default_colors, g_or_gdict; kwargs...)
@@ -156,7 +155,6 @@ end
 function view(fcolor, g_or_gdict::Union{Node{NodeData},NestedGraphDict}; data=nothing, lidict=nothing, kwargs...)
     win, _ = viewgui(fcolor, g_or_gdict; data=data, lidict=lidict, kwargs...)
     Gtk.showall(win)
-    nothing
 end
 
 function viewgui(fcolor, g::Node{NodeData}; kwargs...)
