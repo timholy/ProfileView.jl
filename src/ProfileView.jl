@@ -50,6 +50,9 @@ Clear the Profile buffer, profile `f(args...)`, and view the result graphically.
 """
 macro profview(ex)
     return quote
+        # disable the eventloop while profiling
+        # it will be restarted upon show
+        Gtk.enable_eventloop(false)
         Profile.clear()
         @profile $(esc(ex))
         view()
@@ -130,6 +133,7 @@ function view(data::Vector{UInt64}; lidict=nothing, kwargs...)
     view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
 end
 function view(; kwargs...)
+    Gtk.enable_eventloop(false)
     data, lidict = Profile.retrieve()
     view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
 end
