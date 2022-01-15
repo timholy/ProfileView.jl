@@ -180,11 +180,14 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             tb = Toolbar()
             tb_open = ToolButton("gtk-open")
             tb_save_as = ToolButton("gtk-save-as")
+            tb_info = ToolButton("gtk-info")
             push!(tb, tb_open)
             push!(tb, tb_save_as)
+            push!(tb, tb_info)
             # FIXME: likely have to do `allkwargs` in the two below (add in C, combine, recur)
             signal_connect(open_cb, tb_open, "clicked", Nothing, (), false, (widget(c),gsig,kwargs))
             signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict,g))
+            signal_connect(info_cb, tb_info, "clicked", Nothing, (), false, ())
             bx = Box(:v)
             push!(bx, tb)
             push!(bx, f)
@@ -350,6 +353,36 @@ end
 
 function _save(selection, args...)
     FileIO.save(File{format"JLPROF"}(selection), args...)
+    return nothing
+end
+
+@guarded function info_cb(::Ptr, ::Tuple)
+    # Note: Keep this updated with the readme
+    info = """
+    ProfileView.jl Interface Tips
+    ----------------------------------------------
+
+    `Ctrl-q` and `Ctrl-w `close the window. You can also use `ProfileView.closeall()` to close all windows opened by ProfileView.
+
+    Left-clicking on a bar will cause information about this line to be printed in the REPL. This can be a convenient way to "mark" lines for later investigation.
+
+    Right-clicking on a bar calls the `edit()` function to open the line in an editor. (On a trackpad, use a 2-fingered tap.)
+
+    CTRL-clicking and dragging will zoom in on a specific region of the image. You can also control the zoom level with CTRL-scroll (or CTRL-swipe up/down).
+
+    CTRL-double-click to restore the full view.
+
+    You can pan the view by clicking and dragging, or by scrolling your mouse/trackpad (scroll=vertical, SHIFT-scroll=horizontal).
+
+    The toolbar at the top contains two icons to load and save profile data, respectively. Clicking the save icon will prompt you for a filename; you should use extension *.jlprof for any file you save. Launching ProfileView.view(nothing) opens a blank window, which you can populate with saved data by clicking on the "open" icon.
+
+    After clicking on a bar, you can type warntype_last and see the result of code_warntype for the call represented by that bar.
+
+    `ProfileView.view(windowname="method1")` allows you to name your window, which can help avoid confusion when opening several ProfileView windows simultaneously.
+
+    On Julia 1.8 `ProfileView.view(expand_tasks=true)` creates one tab per task. Expanding by thread is on by default and can be disabled with expand_threads=false.
+    """
+    info_dialog(info)
     return nothing
 end
 
