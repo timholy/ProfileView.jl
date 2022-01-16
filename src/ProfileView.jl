@@ -162,6 +162,7 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
     Gtk.GAccessor.scrollable(nb_threads, true)
     Gtk.GAccessor.show_tabs(nb_threads, length(thread_tabs) > 1)
     sort!(thread_tabs, by = s -> something(tryparse(Int, string(s)), 0)) # sorts thread_tabs as [all threads, 1, 2, 3 ....]
+
     for thread_tab in thread_tabs
         gdict_thread = gdict[thread_tab]
         task_tabs = collect(keys(gdict_thread))
@@ -176,24 +177,41 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             gsig = Observable(g)  # allow substitution by the open dialog
             c = canvas(UserUnit)
             set_gtk_property!(widget(c), :expand, true)
+
             f = Frame(c)
             tb = Toolbar()
             tb_open = ToolButton("gtk-open")
+            Gtk.GAccessor.tooltip_text(tb_open, "open")
             tb_save_as = ToolButton("gtk-save-as")
+            Gtk.GAccessor.tooltip_text(tb_save_as, "save")
+            tb_zoom_fit = ToolButton("gtk-zoom-fit")
+            Gtk.GAccessor.tooltip_text(tb_zoom_fit, "zoom to fit")
+            tb_zoom_in = ToolButton("gtk-zoom-in")
+            Gtk.GAccessor.tooltip_text(tb_zoom_in, "zoom in")
+            tb_zoom_out = ToolButton("gtk-zoom-out")
+            Gtk.GAccessor.tooltip_text(tb_zoom_out, "zoom out")
             tb_info = ToolButton("gtk-info")
+            Gtk.GAccessor.tooltip_text(tb_info, "ProfileView tips")
+
             push!(tb, tb_open)
             push!(tb, tb_save_as)
+            push!(tb, SeparatorToolItem())
+            push!(tb, tb_zoom_fit)
+            push!(tb, tb_zoom_out)
+            push!(tb, tb_zoom_in)
+            push!(tb, SeparatorToolItem())
             push!(tb, tb_info)
-            # FIXME: likely have to do `allkwargs` in the two below (add in C, combine, recur)
+            # FIXME: likely have to do `allkwargs` in the open/save below (add in C, combine, recur)
             signal_connect(open_cb, tb_open, "clicked", Nothing, (), false, (widget(c),gsig,kwargs))
             signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict,g))
             signal_connect(info_cb, tb_info, "clicked", Nothing, (), false, ())
+
             bx = Box(:v)
             push!(bx, tb)
             push!(bx, f)
             # don't use the actual taskid as the tab as it's very long
             push!(nb_tasks, bx, task_tab_num == 1 ? task_tab : Symbol(task_tab_num - 1))
-            fdraw = viewprof(fcolor, c, gsig; kwargs...)
+            fdraw = viewprof(fcolor, c, gsig, (tb_zoom_fit, tb_zoom_out, tb_zoom_in); kwargs...)
             GtkObservables.gc_preserve(nb_threads, c)
             GtkObservables.gc_preserve(nb_threads, fdraw)
             _c, _fdraw, _tb_open, _tb_save_as = c, fdraw, tb_open, tb_save_as
@@ -226,15 +244,16 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
     return win, _c, _fdraw, (_tb_open, _tb_save_as)
 end
 
-function viewprof(fcolor, c, gsig; fontsize=14)
+function viewprof(fcolor, c, gsig, zoom_buttons; fontsize=14)
     obs = on(gsig) do g
-        viewprof_func(fcolor, c, g, fontsize)
+        viewprof_func(fcolor, c, g, fontsize, zoom_buttons)
     end
     gsig[] = gsig[]
     return obs
 end
 
-function viewprof_func(fcolor, c, g, fontsize)
+function viewprof_func(fcolor, c, g, fontsize, zoom_buttons)
+    tb_zoom_fit, tb_zoom_out, tb_zoom_in = zoom_buttons
     # From a given position, find the underlying tag
     function gettag(tagimg, xu, yu)
         x = ceil(Int, Float64(xu))
@@ -253,6 +272,9 @@ function viewprof_func(fcolor, c, g, fontsize)
     img24 = img24[:,end:-1:1]
     fv = XY(0.0..size(img24,1), 0.0..size(img24,2))
     zr = Observable(ZoomRegion(fv, fv))
+    signal_connect(zoom_fit_cb, tb_zoom_fit, "clicked", Nothing, (), false, (zr))
+    signal_connect(zoom_out_cb, tb_zoom_out, "clicked", Nothing, (), false, (zr))
+    signal_connect(zoom_in_cb, tb_zoom_in, "clicked", Nothing, (), false, (zr))
     sigrb = init_zoom_rubberband(c, zr)
     sigpd = init_pan_drag(c, zr)
     sigzs = init_zoom_scroll(c, zr)
@@ -356,6 +378,21 @@ function _save(selection, args...)
     return nothing
 end
 
+@guarded function zoom_fit_cb(::Ptr, zr::Observable{ZoomRegion{T}}) where {T}
+    zr[] = GtkObservables.reset(zr[])
+    return nothing
+end
+
+@guarded function zoom_in_cb(::Ptr, zr::Observable{ZoomRegion{T}}) where {T}
+    setindex!(zr, zoom(zr[], 1/2))
+    return nothing
+end
+
+@guarded function zoom_out_cb(::Ptr, zr::Observable{ZoomRegion{T}}) where {T}
+    setindex!(zr, zoom(zr[], 2))
+    return nothing
+end
+
 @guarded function info_cb(::Ptr, ::Tuple)
     # Note: Keep this updated with the readme
     info = """
@@ -374,7 +411,7 @@ end
 
     You can pan the view by clicking and dragging, or by scrolling your mouse/trackpad (scroll=vertical, SHIFT-scroll=horizontal).
 
-    The toolbar at the top contains two icons to load and save profile data, respectively. Clicking the save icon will prompt you for a filename; you should use extension *.jlprof for any file you save. Launching ProfileView.view(nothing) opens a blank window, which you can populate with saved data by clicking on the "open" icon.
+    The toolbar at the top includes icons to load and save profile data. Clicking the save icon will prompt you for a filename; you should use extension *.jlprof for any file you save. Launching ProfileView.view(nothing) opens a blank window, which you can populate with saved data by clicking on the "open" icon.
 
     After clicking on a bar, you can type warntype_last and see the result of code_warntype for the call represented by that bar.
 
