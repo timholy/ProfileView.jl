@@ -101,26 +101,20 @@ function view(fcolor, data::Vector{UInt64}; lidict=nothing, C=false, combine=tru
     # to track them across thread TODO: Perhaps fix that in base, so tasks keep the same id across threads?
     gdict = NestedGraphDict(tabname_allthreads => Dict{Symbol,Node{NodeData}}(tabname_alltasks => g))
     if expand_threads && isdefined(Profile, :has_meta) && Profile.has_meta(data)
-        dlock_outer = Base.ReentrantLock()
-        Threads.@threads for threadid in Profile.get_thread_ids(data)
+        for threadid in Profile.get_thread_ids(data)
             g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned, threads = threadid)
             gdict_inner = Dict{Symbol,Node{NodeData}}(tabname_alltasks => g)
             if expand_tasks
-                dlock_inner = Base.ReentrantLock()
                 taskids = Profile.get_task_ids(data, threadid)
                 if length(taskids) > 1
                     # skip when there's only one task as it will be the same as "all tasks"
-                    Threads.@threads for taskid in taskids
+                    for taskid in taskids
                         g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned, threads = threadid, tasks = taskid)
-                        lock(dlock_inner) do
-                            gdict_inner[Symbol(taskid)] = g
-                        end
+                        gdict_inner[Symbol(taskid)] = g
                     end
                 end
             end
-            lock(dlock_outer) do
-                gdict[Symbol(threadid)] = gdict_inner
-            end
+            gdict[Symbol(threadid)] = gdict_inner
         end
     end
     return view(fcolor, gdict; data=data, lidict=lidict, kwargs...)
@@ -173,17 +167,11 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
         task_tabs = collect(keys(gdict_thread))
         sort!(task_tabs, by = s -> s == tabname_alltasks ? "" : string(s)) # sorts thread_tabs as [all threads, 0xds ....]
 
-        nb_tasks = if length(task_tabs) > 1
-            # only show the 2nd tab row if there is more than 1 task
-            nb_tasks = Notebook() # for holding the per-task pages
-            Gtk.GAccessor.scrollable(nb_tasks, true)
-            nb_tasks
-        else
-            nothing
-        end
-
+        nb_tasks = Notebook() # for holding the per-task pages
+        Gtk.GAccessor.scrollable(nb_tasks, true)
+        Gtk.GAccessor.show_tabs(nb_tasks, length(task_tabs) > 1)
         task_tab_num = 1
-        @sync for task_tab in task_tabs
+        for task_tab in task_tabs
             g = gdict_thread[task_tab]
             gsig = Observable(g)  # allow substitution by the open dialog
             c = canvas(UserUnit)
@@ -200,25 +188,15 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             bx = Box(:v)
             push!(bx, tb)
             push!(bx, f)
-            #
-            if nb_tasks !== nothing
-                # don't use the actual taskid as the tab as it's very long
-                push!(nb_tasks, bx, task_tab_num == 1 ? task_tab : Symbol(task_tab_num - 1))
-            else
-                push!(nb_threads, bx, string(thread_tab))
-            end
-            Threads.@spawn begin
-                fdraw = viewprof(fcolor, c, gsig; kwargs...)
-                GtkObservables.gc_preserve(nb_threads, c)
-                GtkObservables.gc_preserve(nb_threads, fdraw)
-                _fdraw = fdraw
-            end
-            _c, _tb_open, _tb_save_as = c, tb_open, tb_save_as
+            # don't use the actual taskid as the tab as it's very long
+            push!(nb_tasks, bx, task_tab_num == 1 ? task_tab : Symbol(task_tab_num - 1))
+            fdraw = viewprof(fcolor, c, gsig; kwargs...)
+            GtkObservables.gc_preserve(nb_threads, c)
+            GtkObservables.gc_preserve(nb_threads, fdraw)
+            _c, _fdraw, _tb_open, _tb_save_as = c, fdraw, tb_open, tb_save_as
             task_tab_num += 1
         end
-        if nb_tasks !== nothing
-            push!(nb_threads, nb_tasks, string(thread_tab))
-        end
+        push!(nb_threads, nb_tasks, string(thread_tab))
     end
 
     bx = Box(:v)
