@@ -164,6 +164,9 @@ at the REPL. You'll see the result of Julia's `code_warntype` for that particula
   which can help avoid confusion when opening several ProfileView windows
   simultaneously.
 
+- On Julia 1.8 ProfileView.view(expand_tasks=true) creates one tab per task.
+  Expanding by thread is on by default and can be disabled with `expand_threads=false`.
+
 **NOTE**: ProfileView does not support the old JLD-based `*.jlprof` files anymore.
 Use the format provided by FlameGraphs v0.2 and higher.
 
