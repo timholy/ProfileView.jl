@@ -47,6 +47,7 @@ end
         @test isa(ProfileView.view(C=true), ProfileView.Window)
         @test isa(ProfileView.view(fontsize=18), ProfileView.Window)
         @test isa(ProfileView.view(windowname="ProfileWindow"), ProfileView.Window)
+        @test isa(ProfileView.view(icicle=true), ProfileView.Window)
 
         Profile.clear()
         profile_unstable_test(1, 1)

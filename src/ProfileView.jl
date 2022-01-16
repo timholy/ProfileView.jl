@@ -89,6 +89,7 @@ You have several options to control the output, of which the major ones are:
 - `recur`: on Julia 1.4+, collapse recursive calls (see `Profile.print` for more detail)
 - `expand_threads::Bool = true`: Break down profiling by thread (true by default)
 - `expand_tasks::Bool = false`: Break down profiling of each thread by task (false by default)
+- `icicle::Bool = false`: If `true` the flamegraph is displayed as an icicle graph, hanging from the top.
 
 See [FlameGraphs](https://github.com/timholy/FlameGraphs.jl) for more information.
 """
@@ -155,7 +156,7 @@ function viewgui(fcolor, g::Node{NodeData}; kwargs...)
     gdict = NestedGraphDict(tabname_allthreads => Dict{Symbol,Node{NodeData}}(tabname_alltasks => g))
     viewgui(fcolor, gdict; kwargs...)
 end
-function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, windowname="Profile", kwargs...)
+function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, windowname="Profile", icicle = false, kwargs...)
     _c, _fdraw, _tb_open, _tb_save_as = nothing, nothing, nothing, nothing # needed to be returned for precompile helper
     thread_tabs = collect(keys(gdict))
     nb_threads = Notebook() # for holding the per-thread pages
@@ -211,7 +212,7 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             push!(bx, f)
             # don't use the actual taskid as the tab as it's very long
             push!(nb_tasks, bx, task_tab_num == 1 ? task_tab : Symbol(task_tab_num - 1))
-            fdraw = viewprof(fcolor, c, gsig, (tb_zoom_fit, tb_zoom_out, tb_zoom_in); kwargs...)
+            fdraw = viewprof(fcolor, c, gsig, (tb_zoom_fit, tb_zoom_out, tb_zoom_in), icicle; kwargs...)
             GtkObservables.gc_preserve(nb_threads, c)
             GtkObservables.gc_preserve(nb_threads, fdraw)
             _c, _fdraw, _tb_open, _tb_save_as = c, fdraw, tb_open, tb_save_as
@@ -244,15 +245,15 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
     return win, _c, _fdraw, (_tb_open, _tb_save_as)
 end
 
-function viewprof(fcolor, c, gsig, zoom_buttons; fontsize=14)
+function viewprof(fcolor, c, gsig, zoom_buttons, icicle; fontsize=14)
     obs = on(gsig) do g
-        viewprof_func(fcolor, c, g, fontsize, zoom_buttons)
+        viewprof_func(fcolor, c, g, fontsize, zoom_buttons, icicle)
     end
     gsig[] = gsig[]
     return obs
 end
 
-function viewprof_func(fcolor, c, g, fontsize, zoom_buttons)
+function viewprof_func(fcolor, c, g, fontsize, zoom_buttons, icicle)
     tb_zoom_fit, tb_zoom_out, tb_zoom_in = zoom_buttons
     # From a given position, find the underlying tag
     function gettag(tagimg, xu, yu)
@@ -266,6 +267,10 @@ function viewprof_func(fcolor, c, g, fontsize, zoom_buttons)
     isempty(g.data.span) && return nothing
     img = flamepixels(fcolor, g)
     tagimg = flametags(g, img)
+    if icicle
+        reverse!(img, dims = 2)
+        reverse!(tagimg, dims = 2)
+    end
     # The first column corresponds to the bottom row, which is our fake root node. Get rid of it.
     img, tagimg = img[:,2:end], discardfirstcol(tagimg)
     img24 = RGB24.(img)
@@ -418,6 +423,8 @@ end
     `ProfileView.view(windowname="method1")` allows you to name your window, which can help avoid confusion when opening several ProfileView windows simultaneously.
 
     On Julia 1.8 `ProfileView.view(expand_tasks=true)` creates one tab per task. Expanding by thread is on by default and can be disabled with `expand_threads=false`.
+
+    Using `ProfileView.view(icicle = true)` will show the graph in icicle format, hanging from the top.
     """
     info_dialog(info)
     return nothing
