@@ -399,7 +399,7 @@ end
     ProfileView.jl Interface Tips
     ----------------------------------------------
 
-    `Ctrl-q` and `Ctrl-w `close the window. You can also use `ProfileView.closeall()` to close all windows opened by ProfileView.
+    `Ctrl-q` and `Ctrl-w` close the window. You can also use `ProfileView.closeall()` to close all windows opened by ProfileView.
 
     Left-clicking on a bar will cause information about this line to be printed in the REPL. This can be a convenient way to "mark" lines for later investigation.
 
@@ -411,13 +411,13 @@ end
 
     You can pan the view by clicking and dragging, or by scrolling your mouse/trackpad (scroll=vertical, SHIFT-scroll=horizontal).
 
-    The toolbar at the top includes icons to load and save profile data. Clicking the save icon will prompt you for a filename; you should use extension *.jlprof for any file you save. Launching ProfileView.view(nothing) opens a blank window, which you can populate with saved data by clicking on the "open" icon.
+    The toolbar at the top includes icons to load and save profile data. Clicking the save icon will prompt you for a filename; you should use extension *.jlprof for any file you save. Launching `ProfileView.view(nothing)` opens a blank window, which you can populate with saved data by clicking on the "open" icon.
 
-    After clicking on a bar, you can type warntype_last and see the result of code_warntype for the call represented by that bar.
+    After clicking on a bar, you can type `warntype_last()` and see the result of `code_warntype` for the call represented by that bar.
 
     `ProfileView.view(windowname="method1")` allows you to name your window, which can help avoid confusion when opening several ProfileView windows simultaneously.
 
-    On Julia 1.8 `ProfileView.view(expand_tasks=true)` creates one tab per task. Expanding by thread is on by default and can be disabled with expand_threads=false.
+    On Julia 1.8 `ProfileView.view(expand_tasks=true)` creates one tab per task. Expanding by thread is on by default and can be disabled with `expand_threads=false`.
     """
     info_dialog(info)
     return nothing
