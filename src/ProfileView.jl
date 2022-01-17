@@ -43,18 +43,6 @@ mutable struct ZoomCanvas
     c::Canvas
 end
 
-function gtk_pause_eventloop(f)
-    was_running = Gtk.is_eventloop_running()
-    Gtk.auto_idle[] && Gtk.enable_eventloop(false)
-    try
-        f()
-    finally
-        # needed if another profile window is open, otherwise errors above that prevent
-        # a `show` being called will leave the window frozen
-        Gtk.auto_idle[] && Gtk.enable_eventloop(was_running)
-    end
-end
-
 """
     @profview f(args...)
 
@@ -63,7 +51,7 @@ Clear the Profile buffer, profile `f(args...)`, and view the result graphically.
 macro profview(ex)
     return quote
         # pause the eventloop while profiling
-        gtk_pause_eventloop() do
+        Gtk.pause_eventloop() do
             Profile.clear()
             @profile $(esc(ex))
             view()
@@ -140,7 +128,7 @@ function view(data::Vector{UInt64}; lidict=nothing, kwargs...)
 end
 function view(; kwargs...)
     # pausing the event loop here to facilitate a fast retrieve
-    gtk_pause_eventloop() do
+    Gtk.pause_eventloop() do
         data, lidict = Profile.retrieve()
         view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
     end
