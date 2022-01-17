@@ -273,6 +273,9 @@ function viewprof(fcolor, c, gsig, zoom_buttons, graphtype; fontsize=14)
 end
 
 function viewprof_func(fcolor, c, g, fontsize, zoom_buttons, graphtype)
+    if !in(graphtype, (:flame, :icicle))
+        throw(ArgumentError("Unsupported option for `graphtype` $(repr(graphtype))"))
+    end
     tb_zoom_fit, tb_zoom_out, tb_zoom_in = zoom_buttons
     # From a given position, find the underlying tag
     function gettag(tagimg, xu, yu)
@@ -283,15 +286,17 @@ function viewprof_func(fcolor, c, g, fontsize, zoom_buttons, graphtype)
         y = max(1, min(y, Y))
         tagimg[x,Y-y+1]
     end
+    function device_bb(c)
+        if graphtype == :icicle
+            BoundingBox(0, Graphics.width(c), Graphics.height(c), 0)
+        elseif graphtype == :flame
+            BoundingBox(0, Graphics.width(c), 0, Graphics.height(c))
+        end
+    end
+
     isempty(g.data.span) && return nothing
     img = flamepixels(fcolor, g)
     tagimg = flametags(g, img)
-    if graphtype == :icicle
-        reverse!(img, dims = 2)
-        reverse!(tagimg, dims = 2)
-    elseif graphtype != :flame
-        throw(ArgumentError("Unsupported option for `graphtype` $(repr(graphtype))"))
-    end
     # The first column corresponds to the bottom row, which is our fake root node. Get rid of it.
     img, tagimg = img[:,2:end], discardfirstcol(tagimg)
     img24 = RGB24.(img)
@@ -310,7 +315,7 @@ function viewprof_func(fcolor, c, g, fontsize, zoom_buttons, graphtype)
     let tagimg=tagimg    # julia#15276
         sigredraw = draw(c, zr) do widget, r
             ctx = getgc(widget)
-            set_coordinates(ctx, r)
+            set_coordinates(ctx, device_bb(ctx), BoundingBox(r.currentview))
             rectangle(ctx, BoundingBox(r.currentview))
             set_source(ctx, surf)
             p = Cairo.get_source(ctx)
@@ -324,7 +329,7 @@ function viewprof_func(fcolor, c, g, fontsize, zoom_buttons, graphtype)
                 ctx = getgc(c)
                 if Graphics.width(lasttextbb[]) > 0
                     r = zr[]
-                    set_coordinates(ctx, r)
+                    set_coordinates(ctx, device_bb(ctx), BoundingBox(r.currentview))
                     rectangle(ctx, lasttextbb[])
                     set_source(ctx, surf)
                     p = Cairo.get_source(ctx)
