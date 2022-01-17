@@ -68,8 +68,8 @@ macro profview(ex)
         Gtk.pause_eventloop() do
             Profile.clear()
             @profile $(esc(ex))
-            view()
         end
+        view()
     end
 end
 
@@ -145,10 +145,10 @@ function view(data::Vector{UInt64}; lidict=nothing, kwargs...)
 end
 function view(; kwargs...)
     # pausing the event loop here to facilitate a fast retrieve
-    Gtk.pause_eventloop() do
-        data, lidict = Profile.retrieve()
-        view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
+    data, lidict = Gtk.pause_eventloop() do
+        Profile.retrieve()
     end
+    view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
 end
 
 # This method allows user to open a *.jlprof file
