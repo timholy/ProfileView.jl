@@ -64,12 +64,12 @@ Clear the Profile buffer, profile `f(args...)`, and view the result graphically.
 """
 macro profview(ex)
     return quote
-        # disable the eventloop while profiling
-        # it will be restarted upon show
-        Gtk.auto_idle[] && Gtk.enable_eventloop(false)
-        Profile.clear()
-        @profile $(esc(ex))
-        view()
+        # pause the eventloop while profiling
+        Gtk.pause_eventloop() do
+            Profile.clear()
+            @profile $(esc(ex))
+            view()
+        end
     end
 end
 
@@ -144,9 +144,11 @@ function view(data::Vector{UInt64}; lidict=nothing, kwargs...)
     view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
 end
 function view(; kwargs...)
-    Gtk.auto_idle[] && Gtk.enable_eventloop(false)
-    data, lidict = Profile.retrieve()
-    view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
+    # pausing the event loop here to facilitate a fast retrieve
+    Gtk.pause_eventloop() do
+        data, lidict = Profile.retrieve()
+        view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
+    end
 end
 
 # This method allows user to open a *.jlprof file
