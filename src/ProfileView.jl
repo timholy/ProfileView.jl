@@ -26,7 +26,7 @@ const _graphtype = Ref{Symbol}(Symbol(@load_preference("graphtype", "flame")))
 
 function set_graphtype!(graphtype::String)
     if !(graphtype in ("flame", "icicle"))
-        throw(ArgumentError("Invalid graphtype: $graphtype"))
+        throw(ArgumentError("Invalid graphtype: $graphtype. Valid options are :flame or :icicle"))
     end
     @set_preferences! "graphtype" => graphtype
     _graphtype[] = Symbol(graphtype)
