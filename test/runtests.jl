@@ -55,6 +55,7 @@ end
         @test isa(ProfileView.view(), ProfileView.Window)
 
         @test_throws ArgumentError ProfileView.set_graphtype!(:other)
+        @test_throws ArgumentError ProfileView.view(graphtype = :other)
 
         Profile.clear()
         profile_unstable_test(1, 1)

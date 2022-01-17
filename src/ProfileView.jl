@@ -274,7 +274,7 @@ end
 
 function viewprof_func(fcolor, c, g, fontsize, zoom_buttons, graphtype)
     if !in(graphtype, (:flame, :icicle))
-        throw(ArgumentError("Unsupported option for `graphtype` $(repr(graphtype))"))
+        throw(ArgumentError("Invalid option for `graphtype`: `$(repr(graphtype))`. Valid options are `:flame` and `:icicle`"))
     end
     tb_zoom_fit, tb_zoom_out, tb_zoom_in = zoom_buttons
     # From a given position, find the underlying tag
