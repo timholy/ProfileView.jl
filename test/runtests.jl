@@ -51,15 +51,26 @@ end
 
         before = ProfileView._graphtype[]
         try
-            @test_logs (:info, "Default graphtype set to \"icicle\"") ProfileView.set_graphtype!(:icicle)
+            @test_logs (:info, "Default graphtype set to :icicle") ProfileView.set_graphtype!(:icicle)
             @test isa(ProfileView.view(), ProfileView.Window)
-            @test_logs (:info, "Default graphtype set to \"flame\"") ProfileView.set_graphtype!(:flame)
+            @test_logs (:info, "Default graphtype set to :flame") ProfileView.set_graphtype!(:flame)
             @test isa(ProfileView.view(), ProfileView.Window)
+            @test_throws ArgumentError ProfileView.set_graphtype!(:other)
         finally
-            ProfileView.set_graphtype!(before)
+            @test_logs (:info, "Default graphtype set to $(repr(before))") ProfileView.set_graphtype!(before)
         end
 
-        @test_throws ArgumentError ProfileView.set_graphtype!(:other)
+        before = ProfileView._theme[]
+        try
+            @test_logs (:info, "Default theme set to :dark") ProfileView.set_theme!(:dark)
+            @test isa(ProfileView.view(), ProfileView.Window)
+            @test_logs (:info, "Default theme set to :light") ProfileView.set_theme!(:light)
+            @test isa(ProfileView.view(), ProfileView.Window)
+            @test_throws ArgumentError ProfileView.set_theme!(:other)
+        finally
+            @test_logs (:info, "Default theme set to $(repr(before))") ProfileView.set_theme!(before)
+        end
+
         @test_throws ArgumentError ProfileView.view(graphtype = :other)
 
         Profile.clear()
