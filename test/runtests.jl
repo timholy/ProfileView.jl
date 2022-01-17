@@ -47,7 +47,14 @@ end
         @test isa(ProfileView.view(C=true), ProfileView.Window)
         @test isa(ProfileView.view(fontsize=18), ProfileView.Window)
         @test isa(ProfileView.view(windowname="ProfileWindow"), ProfileView.Window)
-        @test isa(ProfileView.view(icicle=true), ProfileView.Window)
+        @test isa(ProfileView.view(graphtype=:icicle), ProfileView.Window)
+
+        @test_logs (:info, "Default graphtype set to \"icicle\"") ProfileView.set_graphtype!(:icicle)
+        @test isa(ProfileView.view(), ProfileView.Window)
+        @test_logs (:info, "Default graphtype set to \"flame\"") ProfileView.set_graphtype!(:flame)
+        @test isa(ProfileView.view(), ProfileView.Window)
+
+        @test_throws ArgumentError ProfileView.set_graphtype!(:other)
 
         Profile.clear()
         profile_unstable_test(1, 1)
