@@ -13,6 +13,7 @@ using InteractiveUtils
 using Gtk.ShortNames, GtkObservables, Colors, FileIO, IntervalSets
 import Cairo
 using Graphics
+using Preferences
 
 using FlameGraphs: Node, NodeData
 using Gtk.GConstants.GdkModifierType: SHIFT, CONTROL, MOD1
@@ -20,6 +21,19 @@ using Gtk.GConstants.GdkModifierType: SHIFT, CONTROL, MOD1
 export @profview, warntype_last
 
 const clicked = Ref{Any}(nothing)   # for getting access to the clicked bar
+
+const _graphtype = Ref{Symbol}(Symbol(@load_preference("graphtype", "flame")))
+
+function set_graphtype!(graphtype::String)
+    if !(graphtype in ("flame", "icicle"))
+        throw(ArgumentError("Invalid graphtype: $graphtype. Valid options are :flame or :icicle"))
+    end
+    @set_preferences! "graphtype" => graphtype
+    _graphtype[] = Symbol(graphtype)
+    @info "Default graphtype set to $(repr(graphtype))"
+    nothing
+end
+set_graphtype!(graphtype::Symbol) = set_graphtype!(string(graphtype))
 
 """
     warntype_last()
@@ -89,6 +103,9 @@ You have several options to control the output, of which the major ones are:
 - `recur`: on Julia 1.4+, collapse recursive calls (see `Profile.print` for more detail)
 - `expand_threads::Bool = true`: Break down profiling by thread (true by default)
 - `expand_tasks::Bool = false`: Break down profiling of each thread by task (false by default)
+- `graphtype::Symbol = :default`: Control how the graph is shown. `:flame` displays from the bottom up, `:icicle` from
+  from the top down. The default type can be changed via e.g. `ProfileView.set_graphtype!(:icicle)`, which
+  is stored as a preference for the active environment via `Preferences.jl`.
 
 See [FlameGraphs](https://github.com/timholy/FlameGraphs.jl) for more information.
 """
@@ -155,8 +172,11 @@ function viewgui(fcolor, g::Node{NodeData}; kwargs...)
     gdict = NestedGraphDict(tabname_allthreads => Dict{Symbol,Node{NodeData}}(tabname_alltasks => g))
     viewgui(fcolor, gdict; kwargs...)
 end
-function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, windowname="Profile", kwargs...)
+function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, windowname="Profile", graphtype = :default, kwargs...)
     _c, _fdraw, _tb_open, _tb_save_as = nothing, nothing, nothing, nothing # needed to be returned for precompile helper
+    if graphtype == :default
+        graphtype = _graphtype[]
+    end
     thread_tabs = collect(keys(gdict))
     nb_threads = Notebook() # for holding the per-thread pages
     Gtk.GAccessor.scrollable(nb_threads, true)
@@ -211,7 +231,7 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             push!(bx, f)
             # don't use the actual taskid as the tab as it's very long
             push!(nb_tasks, bx, task_tab_num == 1 ? task_tab : Symbol(task_tab_num - 1))
-            fdraw = viewprof(fcolor, c, gsig, (tb_zoom_fit, tb_zoom_out, tb_zoom_in); kwargs...)
+            fdraw = viewprof(fcolor, c, gsig, (tb_zoom_fit, tb_zoom_out, tb_zoom_in), graphtype; kwargs...)
             GtkObservables.gc_preserve(nb_threads, c)
             GtkObservables.gc_preserve(nb_threads, fdraw)
             _c, _fdraw, _tb_open, _tb_save_as = c, fdraw, tb_open, tb_save_as
@@ -244,15 +264,18 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
     return win, _c, _fdraw, (_tb_open, _tb_save_as)
 end
 
-function viewprof(fcolor, c, gsig, zoom_buttons; fontsize=14)
+function viewprof(fcolor, c, gsig, zoom_buttons, graphtype; fontsize=14)
     obs = on(gsig) do g
-        viewprof_func(fcolor, c, g, fontsize, zoom_buttons)
+        viewprof_func(fcolor, c, g, fontsize, zoom_buttons, graphtype)
     end
     gsig[] = gsig[]
     return obs
 end
 
-function viewprof_func(fcolor, c, g, fontsize, zoom_buttons)
+function viewprof_func(fcolor, c, g, fontsize, zoom_buttons, graphtype)
+    if !in(graphtype, (:flame, :icicle))
+        throw(ArgumentError("Invalid option for `graphtype`: `$(repr(graphtype))`. Valid options are `:flame` and `:icicle`"))
+    end
     tb_zoom_fit, tb_zoom_out, tb_zoom_in = zoom_buttons
     # From a given position, find the underlying tag
     function gettag(tagimg, xu, yu)
@@ -263,6 +286,14 @@ function viewprof_func(fcolor, c, g, fontsize, zoom_buttons)
         y = max(1, min(y, Y))
         tagimg[x,Y-y+1]
     end
+    function device_bb(c)
+        if graphtype == :icicle
+            BoundingBox(0, Graphics.width(c), Graphics.height(c), 0)
+        elseif graphtype == :flame
+            BoundingBox(0, Graphics.width(c), 0, Graphics.height(c))
+        end
+    end
+
     isempty(g.data.span) && return nothing
     img = flamepixels(fcolor, g)
     tagimg = flametags(g, img)
@@ -284,7 +315,7 @@ function viewprof_func(fcolor, c, g, fontsize, zoom_buttons)
     let tagimg=tagimg    # julia#15276
         sigredraw = draw(c, zr) do widget, r
             ctx = getgc(widget)
-            set_coordinates(ctx, r)
+            set_coordinates(ctx, device_bb(ctx), BoundingBox(r.currentview))
             rectangle(ctx, BoundingBox(r.currentview))
             set_source(ctx, surf)
             p = Cairo.get_source(ctx)
@@ -298,7 +329,7 @@ function viewprof_func(fcolor, c, g, fontsize, zoom_buttons)
                 ctx = getgc(c)
                 if Graphics.width(lasttextbb[]) > 0
                     r = zr[]
-                    set_coordinates(ctx, r)
+                    set_coordinates(ctx, device_bb(ctx), BoundingBox(r.currentview))
                     rectangle(ctx, lasttextbb[])
                     set_source(ctx, surf)
                     p = Cairo.get_source(ctx)
@@ -418,6 +449,8 @@ end
     `ProfileView.view(windowname="method1")` allows you to name your window, which can help avoid confusion when opening several ProfileView windows simultaneously.
 
     On Julia 1.8 `ProfileView.view(expand_tasks=true)` creates one tab per task. Expanding by thread is on by default and can be disabled with `expand_threads=false`.
+
+    Using the `graphtype` kwarg for `ProfileView.view` controls how the graph is shown. `:flame` displays from the bottom up, `:icicle` from the top down. The default type can be changed via e.g. `ProfileView.set_graphtype!(:icicle)`, which is stored as a preference for the active environment via `Preferences.jl`.
     """
     info_dialog(info)
     return nothing

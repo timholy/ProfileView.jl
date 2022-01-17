@@ -159,7 +159,7 @@ at the REPL. You'll see the result of Julia's `code_warntype` for that particula
 
 - After clicking on a bar, you can type `warntype_last` and see the
   result of `code_warntype` for the call represented by that bar.
-  
+
 - `ProfileView.view(windowname="method1")` allows you to name your window,
   which can help avoid confusion when opening several ProfileView windows
   simultaneously.
@@ -194,6 +194,14 @@ Here is the meaning of the different arguments:
   disambiguate the call graph).
 
 - `fontsize` controls the size of the font displayed as a tooltip.
+
+- `expand_threads` controls whether a page is created for each thread (requires julia 1.8, enabled by default)
+
+- `expand_tasks` controls whether a page is shown for each task (requires julia 1.8, off by default)
+
+- `graphtype::Symbol = :default` controls how the graph is shown. `:flame` displays from the bottom up, `:icicle`
+  from the top down. The default is `:flame` and can be changed via e.g. `ProfileView.set_graphtype!(:icicle)`, which
+  is stored as a preference for the active environment via `Preferences.jl`.
 
 These are the main options, but there are others; see FlameGraphs for more details.
 
