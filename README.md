@@ -197,7 +197,7 @@ Here is the meaning of the different arguments:
 
 - `expand_threads` controls whether a page is created for each thread (requires julia 1.8, enabled by default)
 
-- `expand_tasks` controls whether a page is shown for each task (requires julia 1.9, off by default)
+- `expand_tasks` controls whether a page is shown for each task (requires julia 1.8, off by default)
 
 - `graphtype::Symbol = :default` controls how the graph is shown. `:flame` displays from the bottom up, `:icicle`
   from the top down. The default is `:flame` and can be changed via e.g. `ProfileView.set_graphtype!(:icicle)`, which

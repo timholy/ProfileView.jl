@@ -49,10 +49,15 @@ end
         @test isa(ProfileView.view(windowname="ProfileWindow"), ProfileView.Window)
         @test isa(ProfileView.view(graphtype=:icicle), ProfileView.Window)
 
-        @test_logs (:info, "Default graphtype set to \"icicle\"") ProfileView.set_graphtype!(:icicle)
-        @test isa(ProfileView.view(), ProfileView.Window)
-        @test_logs (:info, "Default graphtype set to \"flame\"") ProfileView.set_graphtype!(:flame)
-        @test isa(ProfileView.view(), ProfileView.Window)
+        before = ProfileView._graphtype[]
+        try
+            @test_logs (:info, "Default graphtype set to \"icicle\"") ProfileView.set_graphtype!(:icicle)
+            @test isa(ProfileView.view(), ProfileView.Window)
+            @test_logs (:info, "Default graphtype set to \"flame\"") ProfileView.set_graphtype!(:flame)
+            @test isa(ProfileView.view(), ProfileView.Window)
+        finally
+            ProfileView.set_graphtype!(before)
+        end
 
         @test_throws ArgumentError ProfileView.set_graphtype!(:other)
         @test_throws ArgumentError ProfileView.view(graphtype = :other)
