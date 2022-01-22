@@ -4,6 +4,7 @@ if isdefined(Base, :Experimental) && isdefined(Base.Experimental, Symbol("@optle
     @eval Base.Experimental.@optlevel 1
 end
 
+using Dates
 using Profile
 using FlameGraphs
 using FlameGraphs.IndirectArrays
@@ -175,6 +176,7 @@ function viewgui(fcolor, g::Node{NodeData}; kwargs...)
     viewgui(fcolor, gdict; kwargs...)
 end
 function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, windowname="Profile", graphtype = :default, kwargs...)
+    windowname = string(windowname, "  —  ", round(Dates.now(), Second))
     _c, _fdraw, _tb_open, _tb_save_as = nothing, nothing, nothing, nothing # needed to be returned for precompile helper
     if graphtype == :default
         graphtype = _graphtype[]
