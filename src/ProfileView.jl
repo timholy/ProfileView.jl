@@ -65,12 +65,13 @@ Clear the Profile buffer, profile `f(args...)`, and view the result graphically.
 """
 macro profview(ex)
     return quote
+        dt = Dates.now()
         # pause the eventloop while profiling
         Gtk.pause_eventloop() do
             Profile.clear()
             @profile $(esc(ex))
         end
-        view()
+        view(;dt = dt)
     end
 end
 
@@ -175,8 +176,8 @@ function viewgui(fcolor, g::Node{NodeData}; kwargs...)
     gdict = NestedGraphDict(tabname_allthreads => Dict{Symbol,Node{NodeData}}(tabname_alltasks => g))
     viewgui(fcolor, gdict; kwargs...)
 end
-function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, windowname="Profile", graphtype = :default, kwargs...)
-    windowname = string(windowname, "  —  ", round(Dates.now(), Second))
+function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, windowname="Profile", dt = Dates.now(), graphtype = :default, kwargs...)
+    windowname = string(windowname, "  —  ", round(dt, Second))
     _c, _fdraw, _tb_open, _tb_save_as = nothing, nothing, nothing, nothing # needed to be returned for precompile helper
     if graphtype == :default
         graphtype = _graphtype[]
