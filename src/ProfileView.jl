@@ -214,6 +214,11 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             Gtk.GAccessor.tooltip_text(tb_zoom_out, "zoom out")
             tb_info = ToolButton("gtk-info")
             Gtk.GAccessor.tooltip_text(tb_info, "ProfileView tips")
+            tb_text_item = ToolItem()
+            Gtk.GAccessor.expand(tb_text_item, true)
+            tb_text = Entry()
+            Gtk.GAccessor.sensitive(tb_text, false)
+            push!(tb_text_item, tb_text)
 
             push!(tb, tb_open)
             push!(tb, tb_save_as)
@@ -223,6 +228,8 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             push!(tb, tb_zoom_in)
             push!(tb, SeparatorToolItem())
             push!(tb, tb_info)
+            push!(tb, SeparatorToolItem())
+            push!(tb, tb_text_item)
             # FIXME: likely have to do `allkwargs` in the open/save below (add in C, combine, recur)
             signal_connect(open_cb, tb_open, "clicked", Nothing, (), false, (widget(c),gsig,kwargs))
             signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict,g))
@@ -233,7 +240,7 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             push!(bx, f)
             # don't use the actual taskid as the tab as it's very long
             push!(nb_tasks, bx, task_tab_num == 1 ? task_tab : Symbol(task_tab_num - 1))
-            fdraw = viewprof(fcolor, c, gsig, (tb_zoom_fit, tb_zoom_out, tb_zoom_in), graphtype; kwargs...)
+            fdraw = viewprof(fcolor, c, gsig, (tb_zoom_fit, tb_zoom_out, tb_zoom_in, tb_text), graphtype; kwargs...)
             GtkObservables.gc_preserve(nb_threads, c)
             GtkObservables.gc_preserve(nb_threads, fdraw)
             _c, _fdraw, _tb_open, _tb_save_as = c, fdraw, tb_open, tb_save_as
@@ -266,19 +273,19 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
     return win, _c, _fdraw, (_tb_open, _tb_save_as)
 end
 
-function viewprof(fcolor, c, gsig, zoom_buttons, graphtype; fontsize=14)
+function viewprof(fcolor, c, gsig, tb_items, graphtype; fontsize=14)
     obs = on(gsig) do g
-        viewprof_func(fcolor, c, g, fontsize, zoom_buttons, graphtype)
+        viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
     end
     gsig[] = gsig[]
     return obs
 end
 
-function viewprof_func(fcolor, c, g, fontsize, zoom_buttons, graphtype)
+function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
     if !in(graphtype, (:flame, :icicle))
         throw(ArgumentError("Invalid option for `graphtype`: `$(repr(graphtype))`. Valid options are `:flame` and `:icicle`"))
     end
-    tb_zoom_fit, tb_zoom_out, tb_zoom_in = zoom_buttons
+    tb_zoom_fit, tb_zoom_out, tb_zoom_in, tb_text = tb_items
     # From a given position, find the underlying tag
     function gettag(tagimg, xu, yu)
         x = ceil(Int, Float64(xu))
@@ -342,12 +349,16 @@ function viewprof_func(fcolor, c, g, fontsize, zoom_buttons, graphtype)
                 xu, yu = btn.position.x, btn.position.y
                 sf = gettag(tagimg, xu, yu)
                 if sf != StackTraces.UNKNOWN
+                    str_long = string(sf.file, ", ", sf.func, ": line ", sf.line)
+                    Gtk.GAccessor.text(tb_text, str_long)
                     str = string(basename(string(sf.file)), ", ", sf.func, ": line ", sf.line)
                     set_source(ctx, fcolor(:font))
                     Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
                     xi = zr[].currentview.x
                     xmin, xmax = minimum(xi), maximum(xi)
                     lasttextbb[] = deform(Cairo.text(ctx, xu, yu, str, halign = xu < (2xmin+xmax)/3 ? "left" : xu < (xmin+2xmax)/3 ? "center" : "right"), -2, 2, -2, 2)
+                else
+                    Gtk.GAccessor.text(tb_text, "")
                 end
                 reveal(c)
             end
