@@ -25,10 +25,7 @@ const clicked = Ref{Any}(nothing)   # for getting access to the clicked bar
 const _graphtype = Ref{Symbol}(Symbol(@load_preference("graphtype", "flame")))
 const _theme = Ref{Symbol}(Symbol(@load_preference("theme", "light")))
 const _theme_colors = Dict(:light => FlameGraphs.default_colors,
-                            :dark => FlameColors(2,
-                                colorbg=RGB(0.09,0.09,0.09), colorfont=colorant"white",
-                                colorsrt=colorant"lightcoral", colorsgc=colorant"darkorange")
-                            )
+                            :dark => FlameGraphs.default_colors_dark)
 
 function set_preference!(pref_const::Ref{Symbol}, name::String, val::Symbol, valids)
     if !(val in valids)
