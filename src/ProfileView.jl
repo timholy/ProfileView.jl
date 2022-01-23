@@ -64,10 +64,14 @@ Clear the Profile buffer, profile `f(args...)`, and view the result graphically.
 """
 macro profview(ex)
     return quote
+        Profile.clear()
         # pause the eventloop while profiling
-        Gtk.pause_eventloop() do
-            Profile.clear()
+        before = Gtk.is_eventloop_running()
+        try
+            Gtk.enable_eventloop(false, wait_stopped = true)
             @profile $(esc(ex))
+        finally
+            Gtk.enable_eventloop(before, wait_stopped = true)
         end
         view()
     end
