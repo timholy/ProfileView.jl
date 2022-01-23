@@ -349,7 +349,7 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
                 xu, yu = btn.position.x, btn.position.y
                 sf = gettag(tagimg, xu, yu)
                 if sf != StackTraces.UNKNOWN
-                    str_long = string(sf.file, ", ", sf.func, ": line ", sf.line)
+                    str_long = long_info_str(sf)
                     Gtk.GAccessor.text(tb_text, str_long)
                     str = string(basename(string(sf.file)), ", ", sf.func, ": line ", sf.line)
                     set_source(ctx, fcolor(:font))
@@ -373,11 +373,7 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
                 clicked[] = sf
                 if sf != StackTraces.UNKNOWN
                     if btn.button == 1
-                        if sf.linfo isa Core.MethodInstance
-                            println(sf.file, ':', sf.line, ", ", sf.linfo)
-                        else
-                            println(sf.file, ':', sf.line, ", ", sf.func, " [inlined]")
-                        end
+                        println(long_info_str(sf))
                     elseif btn.button == 3
                         edit(string(sf.file), sf.line)
                     end
@@ -387,6 +383,14 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
         append!(c.preserved, Any[sigredraw, sigmotion, sigshow])
     end
     return nothing
+end
+
+function long_info_str(sf)
+    if sf.linfo isa Core.MethodInstance
+        string(sf.file, ':', sf.line, ", ", sf.linfo)
+    else
+        string(sf.file, ':', sf.line, ", ", sf.func, " [inlined]")
+    end
 end
 
 @guarded function open_cb(::Ptr, settings::Tuple)
