@@ -23,17 +23,35 @@ export @profview, warntype_last
 const clicked = Ref{Any}(nothing)   # for getting access to the clicked bar
 
 const _graphtype = Ref{Symbol}(Symbol(@load_preference("graphtype", "flame")))
+const _theme = Ref{Symbol}(Symbol(@load_preference("theme", "light")))
+const _theme_colors = Dict(:light => FlameGraphs.default_colors,
+                            :dark => FlameGraphs.default_colors_dark)
 
-function set_graphtype!(graphtype::String)
-    if !(graphtype in ("flame", "icicle"))
-        throw(ArgumentError("Invalid graphtype: $graphtype. Valid options are :flame or :icicle"))
+function set_preference!(pref_const::Ref{Symbol}, name::String, val::Symbol, valids)
+    if !(val in valids)
+        throw(ArgumentError("Invalid $name: $(repr(val)). Valid options are $(valids)"))
     end
-    @set_preferences! "graphtype" => graphtype
-    _graphtype[] = Symbol(graphtype)
-    @info "Default graphtype set to $(repr(graphtype))"
+    @set_preferences! name => string(val)
+    pref_const[] = Symbol(val)
+    @info "Default $name set to $(repr(val))"
     nothing
 end
-set_graphtype!(graphtype::Symbol) = set_graphtype!(string(graphtype))
+
+"""
+    set_graphtype!(theme::Symbol)
+
+Set the graphing type used for the profile graph. Options are :flame (default), :icicle.
+This setting is retained for the active environment via a `LocalPreferences.toml` file.
+"""
+set_graphtype!(graphtype::Symbol) = set_preference!(_graphtype, "graphtype", graphtype, (:flame, :icicle))
+
+"""
+    set_theme!(theme::Symbol)
+
+Set the theme used for the profile graph. Options are :light (default), :dark.
+This setting is retained for the active environment via a `LocalPreferences.toml` file.
+"""
+set_theme!(theme::Symbol) = set_preference!(_theme, "theme", theme, (:light, :dark))
 
 """
     warntype_last()
@@ -145,29 +163,29 @@ function view(fcolor; kwargs...)
     view(fcolor, data; lidict=lidict, kwargs...)
 end
 function view(data::Vector{UInt64}; lidict=nothing, kwargs...)
-    view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
+    view(_theme_colors[_theme[]], data; lidict=lidict, kwargs...)
 end
 function view(; kwargs...)
     # pausing the event loop here to facilitate a fast retrieve
     data, lidict = Gtk.pause_eventloop() do
         Profile.retrieve()
     end
-    view(FlameGraphs.default_colors, data; lidict=lidict, kwargs...)
+    view(_theme_colors[_theme[]], data; lidict=lidict, kwargs...)
 end
 
 # This method allows user to open a *.jlprof file
-viewblank() = (FlameGraphs.default_colors, Node(NodeData(StackTraces.UNKNOWN, 0, 1:0)))
+viewblank() = (_theme_colors[_theme[]], Node(NodeData(StackTraces.UNKNOWN, 0, 1:0)))
 view(::Nothing; kwargs...) = view(viewblank()...; kwargs...)
 
 function view(g::Node{NodeData}; kwargs...)
-    view(FlameGraphs.default_colors, g; kwargs...)
+    view(_theme_colors[_theme[]], g; kwargs...)
 end
 function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, kwargs...)
     win, _ = viewgui(fcolor, g; data=data, lidict=lidict, kwargs...)
     Gtk.showall(win)
 end
 function view(g_or_gdict::Union{Node{NodeData},NestedGraphDict}; kwargs...)
-    view(FlameGraphs.default_colors, g_or_gdict; kwargs...)
+    view(_theme_colors[_theme[]], g_or_gdict; kwargs...)
 end
 function view(fcolor, g_or_gdict::Union{Node{NodeData},NestedGraphDict}; data=nothing, lidict=nothing, kwargs...)
     win, _ = viewgui(fcolor, g_or_gdict; data=data, lidict=lidict, kwargs...)
@@ -456,7 +474,9 @@ end
 
     On Julia 1.8 `ProfileView.view(expand_tasks=true)` creates one tab per task. Expanding by thread is on by default and can be disabled with `expand_threads=false`.
 
-    Using the `graphtype` kwarg for `ProfileView.view` controls how the graph is shown. `:flame` displays from the bottom up, `:icicle` from the top down. The default type can be changed via e.g. `ProfileView.set_graphtype!(:icicle)`, which is stored as a preference for the active environment via `Preferences.jl`.
+    Graph type: Using the `graphtype` kwarg for `ProfileView.view` controls how the graph is shown. `:flame` displays from the bottom up, `:icicle` from the top down. The default type can be changed via e.g. `ProfileView.set_graphtype!(:icicle)`, which is stored as a preference for the active environment via `Preferences.jl`.
+
+    Color theme: The color theme used for the graph is `:light`, which can be changed to `:dark` via `ProfileView.set_theme!(:dark)`
     """
     info_dialog(info)
     return nothing

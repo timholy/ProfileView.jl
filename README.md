@@ -130,6 +130,19 @@ at the REPL. You'll see the result of Julia's `code_warntype` for that particula
 
 ## GUI features
 
+### Customizable defaults:
+
+Some default settings can be changed and retained across settings through a
+`LocalPreferences.toml` file that is added to the active environment.
+
+- Default color theme: The default is `:light`.
+  Alternatively `:dark` can be set.
+  Use `ProfileView.set_theme!(:dark)` to change the default.
+
+- Default graph type: The default is `:flame` which displays from the bottom up.
+  Alternatively `:icicle` displays from the top down.
+  Use `ProfileView.set_graphtype!(:icicle)` to change the default.
+
 ### Gtk Interface
 
 - Ctrl-q and Ctrl-w close the window. You can also use
@@ -200,8 +213,7 @@ Here is the meaning of the different arguments:
 - `expand_tasks` controls whether a page is shown for each task (requires julia 1.8, off by default)
 
 - `graphtype::Symbol = :default` controls how the graph is shown. `:flame` displays from the bottom up, `:icicle`
-  from the top down. The default is `:flame` and can be changed via e.g. `ProfileView.set_graphtype!(:icicle)`, which
-  is stored as a preference for the active environment via `Preferences.jl`.
+  displays from the top down. The default is `:flame` which can be changed via e.g. `ProfileView.set_graphtype!(:icicle)`.
 
 These are the main options, but there are others; see FlameGraphs for more details.
 
