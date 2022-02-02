@@ -239,6 +239,7 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             tb_text_item = ToolItem()
             Gtk.GAccessor.expand(tb_text_item, true)
             tb_text = Entry()
+            Gtk.GAccessor.has_frame(tb_text, false)
             Gtk.GAccessor.sensitive(tb_text, false)
             push!(tb_text_item, tb_text)
 
