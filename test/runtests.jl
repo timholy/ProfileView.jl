@@ -1,6 +1,7 @@
 using Profile
 using ProfileView
 using GtkObservables
+using Gtk4
 using AbstractTrees
 using Test
 
@@ -38,23 +39,23 @@ end
 @testset "ProfileView" begin
     @testset "windows" begin
         profile_test(1)
-        @test isa(@profview(profile_test(10)), ProfileView.Window)
+        @test isa(@profview(profile_test(10)), Gtk4.GtkWindow)
         data, lidict = Profile.retrieve()
 
         Profile.clear()
         @profile profile_test(10)
-        @test isa(ProfileView.view(), ProfileView.Window)
-        @test isa(ProfileView.view(C=true), ProfileView.Window)
-        @test isa(ProfileView.view(fontsize=18), ProfileView.Window)
-        @test isa(ProfileView.view(windowname="ProfileWindow"), ProfileView.Window)
-        @test isa(ProfileView.view(graphtype=:icicle), ProfileView.Window)
+        @test isa(ProfileView.view(), Gtk4.GtkWindow)
+        @test isa(ProfileView.view(C=true), Gtk4.GtkWindow)
+        @test isa(ProfileView.view(fontsize=18), Gtk4.GtkWindow)
+        @test isa(ProfileView.view(windowname="ProfileWindow"), Gtk4.GtkWindow)
+        @test isa(ProfileView.view(graphtype=:icicle), Gtk4.GtkWindow)
 
         before = ProfileView._graphtype[]
         try
             @test_logs (:info, "Default graphtype set to :icicle") ProfileView.set_graphtype!(:icicle)
-            @test isa(ProfileView.view(), ProfileView.Window)
+            @test isa(ProfileView.view(), Gtk4.GtkWindow)
             @test_logs (:info, "Default graphtype set to :flame") ProfileView.set_graphtype!(:flame)
-            @test isa(ProfileView.view(), ProfileView.Window)
+            @test isa(ProfileView.view(), Gtk4.GtkWindow)
             @test_throws ArgumentError ProfileView.set_graphtype!(:other)
         finally
             @test_logs (:info, "Default graphtype set to $(repr(before))") ProfileView.set_graphtype!(before)
@@ -63,9 +64,9 @@ end
         before = ProfileView._theme[]
         try
             @test_logs (:info, "Default theme set to :dark") ProfileView.set_theme!(:dark)
-            @test isa(ProfileView.view(), ProfileView.Window)
+            @test isa(ProfileView.view(), Gtk4.GtkWindow)
             @test_logs (:info, "Default theme set to :light") ProfileView.set_theme!(:light)
-            @test isa(ProfileView.view(), ProfileView.Window)
+            @test isa(ProfileView.view(), Gtk4.GtkWindow)
             @test_throws ArgumentError ProfileView.set_theme!(:other)
         finally
             @test_logs (:info, "Default theme set to $(repr(before))") ProfileView.set_theme!(before)
@@ -76,15 +77,15 @@ end
         Profile.clear()
         profile_unstable_test(1, 1)
         @profile profile_unstable_test(10, 10^6)
-        @test isa(ProfileView.view(), ProfileView.Window)
+        @test isa(ProfileView.view(), Gtk4.GtkWindow)
 
-        @test isa(ProfileView.view(ProfileView.FlameGraphs.flamegraph()), ProfileView.Window)
-        @test isa(ProfileView.view(ProfileView.FlameGraphs.FlameColors()), ProfileView.Window)
+        @test isa(ProfileView.view(ProfileView.FlameGraphs.flamegraph()), Gtk4.GtkWindow)
+        @test isa(ProfileView.view(ProfileView.FlameGraphs.FlameColors()), Gtk4.GtkWindow)
 
         data, lidict = Profile.retrieve()
-        @test isa(ProfileView.view(data, lidict=lidict), ProfileView.Window)
+        @test isa(ProfileView.view(data, lidict=lidict), Gtk4.GtkWindow)
 
-        @test isa(ProfileView.view(nothing), ProfileView.Window)
+        @test isa(ProfileView.view(nothing), Gtk4.GtkWindow)
 
         # Interactivity
         stackframe(func, file, line; C=false) = ProfileView.StackFrame(Symbol(func), Symbol(file), line, nothing, C, false, 0)
@@ -108,9 +109,9 @@ end
             8=>[stackframe(:f6, :file3, 10)])
         g = ProfileView.flamegraph(backtraces; lidict=lidict)
         win, c, fdraw, (tb_open, tb_save_as) = ProfileView.viewgui(ProfileView.FlameGraphs.default_colors, g);
-        ProfileView.Gtk.showall(win)
+        ProfileView.Gtk4.show(win)
         sleep(1.0)
-        @test c.widget.is_realized && c.widget.is_sized  # to ensure the motion test really runs
+        @test c.widget.is_sized  # to ensure the motion test really runs
         btn = c.mouse.motion[]
         c.mouse.motion[] = MouseButton(XY{UserUnit}(2.8, 1.4), btn.button, btn.clicktype, btn.modifiers)
         # do it again to check the repair code
@@ -144,7 +145,7 @@ end
         @profile profile_test(10)
         g = ProfileView.flamegraph()
         win, c, fdraw, (tb_open, tb_save_as) = ProfileView.viewgui(ProfileView.FlameGraphs.default_colors, g);
-        ProfileView.Gtk.showall(win)
+        ProfileView.Gtk4.show(win)
         sleep(1.0)
         sz = size(ProfileView.flamepixels(ProfileView.FlameGraphs.default_colors, g))
         mktemp() do path, io
