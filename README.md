@@ -59,6 +59,7 @@ using ProfileView
 ```
 
 `@profview f(args...)` is just shorthand for `Profile.clear(); @profile f(args...); ProfileView.view()`.
+(These commands require that you first say `using Profile`, the Julia profiling standard library.)
 
 > If you use ProfileView from VSCode you'll get an error `UndefVarError: @profview not defined`.
 > This is because VSCode defines its own `@profview`, which conflicts with ProfileView's.
@@ -213,12 +214,14 @@ Here is the meaning of the different arguments:
 - `fcolor` optionally allows you to control the scheme used to select
   bar color. This can be quite extensively customized; see [FlameGraphs](https://timholy.github.io/FlameGraphs.jl/stable/) for details.
 
-- `data` is the vector containing backtraces. You can use `data1 =
+- `data` is the vector containing backtraces. You can use `using Profile; data1 =
   copy(Profile.fetch()); Profile.clear()` to store and examine results
   from multiple profile runs simultaneously.
 
-- `lidict` is a dictionary containing "line information."
-  See the section on saving profile data below.
+- `lidict` is a dictionary containing "line information." This is obtained together with
+  `data` from `using Profile; data, lidict = Profile.retrieve()`. Computing `lidict` is
+  the slow step in displaying profile data, so calling `retrieve` can speed up repeated
+  visualizations of the same data.
 
 - `C` is a flag controlling whether lines corresponding to C and Fortran
   code are displayed. (Internally, ProfileView uses the information
