@@ -4,6 +4,7 @@ if isdefined(Base, :Experimental) && isdefined(Base.Experimental, Symbol("@optle
     @eval Base.Experimental.@optlevel 1
 end
 
+using Dates
 using Profile
 using FlameGraphs
 using FlameGraphs.IndirectArrays
@@ -85,13 +86,14 @@ macro profview(ex)
         Profile.clear()
         # pause the eventloop while profiling
         before = Gtk.is_eventloop_running()
+        dt = Dates.now()
         try
             Gtk.enable_eventloop(false, wait_stopped = true)
             @profile $(esc(ex))
         finally
             Gtk.enable_eventloop(before, wait_stopped = true)
         end
-        view()
+        view(;windowname = "Profile  -  $(Time(round(dt, Second)))")
     end
 end
 
