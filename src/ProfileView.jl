@@ -362,7 +362,10 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
                 if Graphics.width(lasttextbb[]) > 0
                     r = zr[]
                     set_coordinates(ctx, device_bb(ctx), BoundingBox(r.currentview))
-                    rectangle(ctx, lasttextbb[])
+                    # The bbox returned by deform/Cairo.text below is malformed when the y-axis is inverted
+                    # so redraw the whole screen in :icicle mode
+                    # TODO: Fix the bbox for efficient redraw
+                    rectangle(ctx, graphtype == :icicle ? BoundingBox(r.currentview) : lasttextbb[])
                     set_source(ctx, surf)
                     p = Cairo.get_source(ctx)
                     Cairo.pattern_set_filter(p, Cairo.FILTER_NEAREST)
