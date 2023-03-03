@@ -225,11 +225,33 @@ You may see something like this:
 
 You can see the source code of the running method, with "problematic" type-inference
 results highlighted in red. (By default, non-problematic type inference results are
-suppressed, but you can toggle their display with `'h'`.) For this example,
-you can see that objects extracted from `v` have type `Any`: that's because in
-`profile_test_sort`, we created `list` as `list = []`, which makes it a `Vector{Any}`;
-in this case, a better option might be `list = Float64[]`.
+suppressed, but you can toggle their display with `'h'`.)
 
+For this example, you can see that objects extracted from `v` have type `Any`: that's because in
+`profile_test_sort`, we created `list` as `list = []`, which makes it a `Vector{Any}`;
+in this case, a better option might be `list = Float64[]`. Notice that the *cause* of the performance
+problem is quite far-removed from the place where it manifests, because it's only when
+the low-level operations required by `sort!` get underway that the consequence of our choice
+of container type become an issue. Often it's necessary to "chase" these performance issues
+backwards to a caller; for that, `ascend_clicked()` can be useful:
+
+```julia
+julia> ascend_clicked()
+Choose a call for analysis (q to quit):
+ >   partition!(::Vector{Any}, ::Int64, ::Int64, ::Int64, ::Base.Order.ForwardOrdering, ::Vector{Any}, ::Bool, ::Vector{Any}, ::Int64)
+       #_sort!#25(::Vector{Any}, ::Int64, ::Bool, ::Bool, ::typeof(Base.Sort._sort!), ::Vector{Any}, ::Base.Sort.ScratchQuickSort{Missing, Missing, Base.Sort.Insertio
+         kwcall(::NamedTuple{(:t, :offset, :swap, :rev), Tuple{Vector{Any}, Int64, Bool, Bool}}, ::typeof(Base.Sort._sort!), ::Vector{Any}, ::Base.Sort.ScratchQuickSo
+           #_sort!#25(::Vector{Any}, ::Int64, ::Bool, ::Bool, ::typeof(Base.Sort._sort!), ::Vector{Any}, ::Base.Sort.ScratchQuickSort{Missing, Missing, Base.Sort.Inse
+           #_sort!#25(::Nothing, ::Nothing, ::Bool, ::Bool, ::typeof(Base.Sort._sort!), ::Vector{Any}, ::Base.Sort.ScratchQuickSort{Missing, Missing, Base.Sort.Insert
+             _sort!(::Vector{Any}, ::Base.Sort.ScratchQuickSort{Missing, Missing, Base.Sort.InsertionSortAlg}, ::Base.Order.ForwardOrdering, ::NamedTuple{(:scratch, :
+               _sort!(::Vector{Any}, ::Base.Sort.StableCheckSorted{Base.Sort.ScratchQuickSort{Missing, Missing, Base.Sort.InsertionSortAlg}}, ::Base.Order.ForwardOrde
+                 _sort!(::Vector{Any}, ::Base.Sort.IsUIntMappable{Base.Sort.Small{40, Base.Sort.InsertionSortAlg, Base.Sort.CheckSorted{Base.Sort.ComputeExtrema{Base.
+                   _sort!(::Vector{Any}, ::Base.Sort.IEEEFloatOptimization{Base.Sort.IsUIntMappable{Base.Sort.Small{40, Base.Sort.InsertionSortAlg, Base.Sort.CheckSor
+v                    _sort!(::Vector{Any}, ::Base.Sort.Small{10, Base.Sort.InsertionSortAlg, Base.Sort.IEEEFloatOptimization{Base.Sort.IsUIntMappable{Base.Sort.Small{
+```
+
+This is an interactive menu showing each "callee" above the "caller": use the up and down arrows to pick a call to `descend` into. If you scroll to the bottom
+you'll see the `profile_test_sort` call that triggered the whole cascade.
 
 You can also see type-inference results without using Cthulhu: just enter
 

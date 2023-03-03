@@ -20,7 +20,7 @@ using Requires
 using FlameGraphs: Node, NodeData
 using Gtk.GConstants.GdkModifierType: SHIFT, CONTROL, MOD1
 
-export @profview, warntype_clicked, descend_clicked
+export @profview, warntype_clicked, descend_clicked, ascend_clicked
 @deprecate warntype_last warntype_clicked
 
 const clicked = Ref{Any}(nothing)   # for getting access to the clicked bar
@@ -64,7 +64,7 @@ Show `code_warntype` for the most recently-clicked bar.
 
 Optionally direct output to stream `io`. Keyword arguments are passed to `code_warntype`.
 
-See also: [`descend_clicked`](@ref)
+See also: [`descend_clicked`](@ref).
 """
 function warntype_clicked(io::IO=stdout; kwargs...)
     st = clicked[]
@@ -76,16 +76,28 @@ function warntype_clicked(io::IO=stdout; kwargs...)
 end
 
 """
-    descend_clicked(; optimize=false, iswarn=true, hide_type_stable=true)
+    descend_clicked(; optimize=false, iswarn=true, hide_type_stable=true, kwargs...)
 
 Run [Cthulhu's](https://github.com/JuliaDebug/Cthulhu.jl) `descend` for the most recently-clicked bar.
 To make this function available, you must be `using Cthulhu` in your session.
 
 Keyword arguments control the initial view mode.
 
-See also: [`descend_warntype`](@ref)
+See also: [`ascend_clicked`](@ref), [`descend_warntype`](@ref)
 """
 function descend_clicked end
+
+"""
+    ascend_clicked(; hide_type_stable=true, kwargs...)
+
+Run [Cthulhu's](https://github.com/JuliaDebug/Cthulhu.jl) `ascend` for the most recently-clicked bar.
+To make this function available, you must be `using Cthulhu` in your session.
+
+Keyword arguments control the initial view mode.
+
+See also: [`descend_clicked`](@ref)
+"""
+function ascend_clicked end
 
 mutable struct ZoomCanvas
     bb::BoundingBox  # in user-coordinates
@@ -531,6 +543,14 @@ function __init__()
                 return nothing
             end
             return Cthulhu.descend(st.linfo; optimize, iswarn, hide_type_stable, kwargs...)
+        end
+        function ascend_clicked(; hide_type_stable=true, kwargs...)
+            st = clicked[]
+            if st === nothing || st.linfo === nothing
+                @warn "the bar you clicked on might have been inlined and unavailable for inspection. Click on a non-inlined bar to `descend`."
+                return nothing
+            end
+            return Cthulhu.ascend(st; hide_type_stable, kwargs...)
         end
     end
 end
