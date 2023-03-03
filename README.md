@@ -65,11 +65,11 @@ using ProfileView
 > This is because VSCode defines its own `@profview`, which conflicts with ProfileView's.
 > Fix it by using `ProfileView.@profview`.
 
-If you're following along, you should see something like this:
+If you're following along, you may see something like this:
 
 ![ProfileView](readme_images/pv1.png)
 
-(Note that collected profiles can vary from run-to-run, so don't be alarmed
+(Note that collected profiles can vary by Julia version and from run-to-run, so don't be alarmed
 if you get something different.)
 This plot is a visual representation of the *call graph* of the code that you just profiled.
 The "root" of the tree is at the bottom; if you move your mouse along the long horizontal
@@ -115,19 +115,22 @@ prompt, and so the bottom `eval` call is red.
 Red bars are problematic only when they account for a sizable
 fraction of the top of a call stack, as only in such cases are they likely to be
 the source of a significant performance bottleneck.
-We can see that `mapslices` relies on run-time dispatch;
+In the image above, can see that `mapslices` relied on run-time dispatch;
 from the absence of pastel-colored bars above much of the red, we
-might guess that this makes a substantial
+might guess that this made a substantial
 contribution to its total run time.
+(Your version of Julia may show different results.)
+See [Solving type-inference problems](solving-type-inference-problems) below
+for tips on how to efficiently diagnose the nature of the problem.
 
-To determine the nature of the inference problem(s) in a red bar, left-click on it
-and then enter
-
-```julia
-julia> warntype_last()
-```
-
-at the REPL. You'll see the result of Julia's `code_warntype` for that particular call.
+Yellow is also a special color: it indicates a site of garbage collection, which can be
+triggered at a site of memory allocation. You may find that such bars lead you to lines
+whose performance can be improved by reducing the amount of temporary memory allocated
+by your program. One common example is to consider using `@views(A[:, i] .* v)` instead
+of `A[:, i] .* v`; the latter creates a new column-vector from `A`, whereas the former
+just creates a reference to it.
+Julia's [memory profiler](https://docs.julialang.org/en/v1/stdlib/Profile/#Memory-profiling)
+may provide much more information about the usage of memory in your program.
 
 ## GUI features
 
@@ -183,6 +186,59 @@ Some default settings can be changed and retained across settings through a
 
 **NOTE**: ProfileView does not support the old JLD-based `*.jlprof` files anymore.
 Use the format provided by FlameGraphs v0.2 and higher.
+
+
+## Solving type-inference problems
+
+[Cthulhu.jl](https://github.com/JuliaDebug/Cthulhu.jl) is a powerful tool for
+diagnosing problems of type inference. Let's do a simple demo:
+
+```julia
+function profile_test_sort(n, len=100000)
+    for i = 1:n
+        list = []
+        for _ in 1:len
+            push!(list, rand())
+        end
+        sort!(list)
+    end
+end
+
+julia> profile_test_sort(1)  # to force compilation
+
+julia> @profview profile_test_sort(10)
+```
+
+Notice that there are lots of individual red bars (`sort!` is recursive) along the top
+row of the image. To determine the nature of the inference problem(s) in a red bar, left-click on it
+and then enter
+
+```julia
+julia> using Cthulhu
+
+julia> descend_clicked()
+```
+
+You may see something like this:
+
+![ProfileView](readme_images/descend.png)
+
+You can see the source code of the running method, with "problematic" type-inference
+results highlighted in red. (By default, non-problematic type inference results are
+suppressed, but you can toggle their display with `'h'`.) For this example,
+you can see that objects extracted from `v` have type `Any`: that's because in
+`profile_test_sort`, we created `list` as `list = []`, which makes it a `Vector{Any}`;
+in this case, a better option might be `list = Float64[]`.
+
+
+You can also see type-inference results without using Cthulhu: just enter
+
+```
+julia> warntype_clicked()
+```
+
+at the REPL. You'll see the result of Julia's `code_warntype` for the call you clicked on.
+
 
 ### Advanced usage: deeper analysis of specific dispatches
 
