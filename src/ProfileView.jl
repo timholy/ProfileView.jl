@@ -506,9 +506,41 @@ end
 discardfirstcol(A) = A[:,2:end]
 discardfirstcol(A::IndirectArray) = IndirectArray(A.index[:,2:end], A.values)
 
-if ccall(:jl_generating_output, Cint, ()) == 1
-    include("precompile.jl")
-    _precompile_()
+using SnoopPrecompile
+
+let
+    @precompile_setup begin
+        stackframe(func, file, line; C=false) = StackFrame(Symbol(func), Symbol(file), line, nothing, C, false, 0)
+
+        backtraces = UInt64[0, 4, 3, 2, 1,   # order: calles then caller
+                            0, 6, 5, 1,
+                            0, 8, 7,
+                            0, 4, 3, 2, 1,
+                            0]
+        if isdefined(Profile, :add_fake_meta)
+            backtraces = Profile.add_fake_meta(backtraces)
+        end
+        lidict = Dict{UInt64,StackFrame}(1=>stackframe(:f1, :file1, 1),
+                                        2=>stackframe(:f2, :file1, 5),
+                                        3=>stackframe(:f3, :file2, 1),
+                                        4=>stackframe(:f2, :file1, 15),
+                                        5=>stackframe(:f4, :file1, 20),
+                                        6=>stackframe(:f5, :file3, 1),
+                                        7=>stackframe(:f1, :file1, 2),
+                                        8=>stackframe(:f6, :file3, 10))
+        @precompile_all_calls begin
+            g = flamegraph(backtraces; lidict=lidict)
+            gdict = Dict(tabname_allthreads => Dict(tabname_alltasks => g))
+            win, c, fdraw = viewgui(FlameGraphs.default_colors, gdict)
+            for obs in c.preserved
+                if isa(obs, Observable) || isa(obs, Observables.ObserverFunction)
+                    precompile(obs)
+                end
+            end
+            precompile(fdraw)
+            closeall()   # necessary to prevent serialization of stale references (including the internal `empty!`)
+        end
+    end
 end
 
 end
