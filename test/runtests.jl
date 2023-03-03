@@ -161,19 +161,19 @@ end
         ProfileView.closeall()
     end
 
-    @testset "warntype_last" begin
-        # Test `warntype_last`
+    @testset "warntype_clicked" begin
+        # Test `warntype_clicked`
         ProfileView.clicked[] = nothing
-        @test_logs (:warn, "click on a non-inlined bar to see `code_warntype` info") warntype_last() === nothing
+        @test_logs (:warn, "click on a non-inlined bar to see `code_warntype` info") warntype_clicked() === nothing
         _, bt = add2(Any[1,2])
         st = stacktrace(bt)
         ProfileView.clicked[] = st[1]
         io = IOBuffer()
-        warntype_last(io)
+        warntype_clicked(io)
         str = String(take!(io))
         @test occursin("Base.getindex(x, 1)::ANY", str)
         idx = findfirst(sf -> sf.inlined, st)
         ProfileView.clicked[] = st[idx]
-        @test_logs (:warn, "click on a non-inlined bar to see `code_warntype` info") warntype_last(io) === nothing
+        @test_logs (:warn, "click on a non-inlined bar to see `code_warntype` info") warntype_clicked(io) === nothing
     end
 end
