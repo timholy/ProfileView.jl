@@ -318,7 +318,12 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
         Y = size(tagimg, 2)
         x = max(1, min(x, size(tagimg, 1)))
         y = max(1, min(y, Y))
-        tagimg[x,Y-y+1]
+        I = x, Y-y+1
+        if checkbounds(Bool, tagimg, I...)
+            tagimg[I...]
+        else
+            StackTraces.UNKNOWN
+        end
     end
     function device_bb(c)
         if graphtype == :icicle
