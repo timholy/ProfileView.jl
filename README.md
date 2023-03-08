@@ -261,25 +261,8 @@ julia> warntype_clicked()
 
 at the REPL. You'll see the result of Julia's `code_warntype` for the call you clicked on.
 
-
-### Advanced usage: deeper analysis of specific dispatches
-
-`ProfileView.clicked[]` stores a stackframe entry for the most recently clicked
-bar. You can use that to extract particular calls for deeper analysis. Here's
-a demo using [Cthulhu](https://github.com/JuliaDebug/Cthulhu.jl):
-
-```julia
-julia> sf = ProfileView.clicked[]
-inner_mapslices!(safe_for_reuse::Bool, indices::Base.Iterators.Drop{CartesianIndices{2, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}}}, nidx::Int64, idx::Vector{Any}, otherdims::Vector{Int64}, ridx::Vector{Any}, Aslice::Vector{Float64}, A::Array{Float64, 3}, f::typeof(sum), R::Array{Float64, 3}) at abstractarray.jl:2896
-
-julia> mi = sf.linfo
-MethodInstance for Base.inner_mapslices!(::Bool, ::Base.Iterators.Drop{CartesianIndices{2, Tuple{Base.OneTo{Int64}, Base.OneTo{Int64}}}}, ::Int64, ::Vector{Any}, ::Vector{Int64}, ::Vector{Any}, ::Vector{Float64}, ::Array{Float64, 3}, ::typeof(sum), ::Array{Float64, 3})
-
-julia> using Cthulhu
-
-julia> descend(mi; optimize=false, iswarn=true)
-...
-```
+These commands all use `ProfileView.clicked[]`, which stores a stackframe entry for the most recently clicked
+bar.
 
 ## Command-line options
 
