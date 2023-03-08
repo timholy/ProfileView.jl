@@ -550,7 +550,12 @@ function __init__()
                 @warn "the bar you clicked on might have been inlined and unavailable for inspection. Click on a non-inlined bar to `descend`."
                 return nothing
             end
-            return Cthulhu.ascend(st; hide_type_stable, kwargs...)
+            return Cthulhu.ascend(st.linfo; hide_type_stable, kwargs...)
+        end
+    end
+    Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
+        if (exc.f === descend_clicked || exc.f === ascend_clicked) && isempty(argtypes)
+            printstyled(io, "\n`using Cthulhu` is required for `$(exc.f)`"; color=:yellow)
         end
     end
 end
