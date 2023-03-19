@@ -24,6 +24,7 @@ export @profview, warntype_clicked, descend_clicked, ascend_clicked
 @deprecate warntype_last warntype_clicked
 
 const clicked = Ref{Any}(nothing)   # for getting access to the clicked bar
+const clicked_trace = Ref{Any}(nothing)
 
 const _graphtype = Ref{Symbol}(Symbol(@load_preference("graphtype", "flame")))
 const _theme = Ref{Symbol}(Symbol(@load_preference("theme", "light")))
@@ -433,6 +434,15 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
                     elseif btn.button == 3
                         edit(string(sf.file), sf.line)
                     end
+                    # Also collect the trace
+                    Y = size(tagimg, 2)
+                    trace = [sf]
+                    yu += 1
+                    while yu < Y
+                        push!(trace, gettag(tagimg, xu, yu))
+                        yu += 1
+                    end
+                    clicked_trace[] = trace
                 end
             end
         end
@@ -550,7 +560,11 @@ function __init__()
                 @warn "the bar you clicked on might have been inlined and unavailable for inspection. Click on a non-inlined bar to `descend`."
                 return nothing
             end
-            return Cthulhu.ascend(st.linfo; hide_type_stable, kwargs...)
+            if hasmethod(Cthulhu.buildframes, Tuple{Vector{StackTraces.StackFrame}})
+                return Cthulhu.ascend(clicked_trace[]; hide_type_stable, kwargs...)
+            else
+                return Cthulhu.ascend(st.linfo; hide_type_stable, kwargs...)
+            end
         end
     end
     Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
