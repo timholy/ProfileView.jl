@@ -499,7 +499,7 @@ end
 unhandled = convert(Cint, false)
 
 @guarded unhandled function close_cb(::Ptr, keyval::UInt32, keycode::UInt32, state::UInt32, win::GtkWindow)
-    if (ModifierType(state) & CONTROL == CONTROL) && (keyval == UInt('q') || keyval == UInt('w'))
+    if (ModifierType(state & Gtk4.MODIFIER_MASK) & CONTROL == CONTROL) && (keyval == UInt('q') || keyval == UInt('w'))
         @async Gtk4.destroy(win)
         return Cint(1)
     end
