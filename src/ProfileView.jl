@@ -416,9 +416,11 @@ end
 
 @guarded function open_cb(::Ptr, settings::Tuple)
     c, gsig, kwargs = settings
-    selection = open_dialog("Load profile data", toplevel(c), ("*.jlprof","*"))
-    isempty(selection) && return nothing
-    return _open(gsig, selection; kwargs...)
+    open_dialog("Load profile data", toplevel(c), ("*.jlprof","*")) do selection
+        isempty(selection) && return nothing
+        _open(gsig, selection; kwargs...)
+    end
+    return nothing
 end
 
 function _open(gsig, selection; kwargs...)
@@ -434,12 +436,13 @@ end
 
 @guarded function save_as_cb(::Ptr, profdata::Tuple)
     c, data, lidict, g = profdata
-    selection = save_dialog("Save profile data as *.jlprof file", toplevel(c), ("*.jlprof",))
-    isempty(selection) && return nothing
-    if data === nothing && lidict === nothing
-        return _save(selection, g)
+    save_dialog("Save profile data as *.jlprof file", toplevel(c), ("*.jlprof",)) do selection
+        isempty(selection) && return nothing
+        if data === nothing && lidict === nothing
+            _save(selection, g)
+        end
     end
-    return _save(selection, data, lidict)
+    return nothing
 end
 
 function _save(selection, args...)
@@ -492,7 +495,9 @@ end
 
     Color theme: The color theme used for the graph is `:light`, which can be changed to `:dark` via `ProfileView.set_theme!(:dark)`
     """
-    info_dialog(info)
+    info_dialog(info) do
+        nothing
+    end
     return nothing
 end
 
