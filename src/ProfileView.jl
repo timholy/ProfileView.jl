@@ -86,13 +86,13 @@ macro profview(ex)
     return quote
         Profile.clear()
         # pause the eventloop while profiling
-        #before = Gtk.is_eventloop_running()
+        #before = Gtk4.GLib.is_loop_running()
         dt = Dates.now()
         try
-            #Gtk.enable_eventloop(false, wait_stopped = true)
+            #Gtk4.GLib.stop_main_loop()
             @profile $(esc(ex))
         finally
-            #Gtk.enable_eventloop(before, wait_stopped = true)
+            #Gtk4.GLib.start_main_loop()
         end
         view(;windowname = "Profile  -  $(Time(round(dt, Second)))")
     end
@@ -204,8 +204,8 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
     end
     thread_tabs = collect(keys(gdict))
     nb_threads = GtkNotebook() # for holding the per-thread pages
-    Gtk4.G_.set_scrollable(nb_threads, true)
-    Gtk4.G_.set_show_tabs(nb_threads, length(thread_tabs) > 1)
+    Gtk4.scrollable(nb_threads, true)
+    Gtk4.show_tabs(nb_threads, length(thread_tabs) > 1)
     sort!(thread_tabs, by = s -> something(tryparse(Int, string(s)), 0)) # sorts thread_tabs as [all threads, 1, 2, 3 ....]
 
     for thread_tab in thread_tabs
@@ -214,8 +214,8 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
         sort!(task_tabs, by = s -> s == tabname_alltasks ? "" : string(s)) # sorts thread_tabs as [all threads, 0xds ....]
 
         nb_tasks = GtkNotebook() # for holding the per-task pages
-        Gtk4.G_.set_scrollable(nb_tasks, true)
-        Gtk4.G_.set_show_tabs(nb_tasks, length(task_tabs) > 1)
+        Gtk4.scrollable(nb_tasks, true)
+        Gtk4.show_tabs(nb_tasks, length(task_tabs) > 1)
         task_tab_num = 1
         for task_tab in task_tabs
             g = gdict_thread[task_tab]
@@ -225,21 +225,21 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
 
             f = GtkFrame(c)
             tb = GtkBox(:h)
-            tb_open = Gtk4.G_.Button_new_from_icon_name("document-open-symbolic")
-            Gtk4.G_.set_tooltip_text(tb_open, "open")
-            tb_save_as = Gtk4.G_.Button_new_from_icon_name("document-save-as-symbolic")
-            Gtk4.G_.set_tooltip_text(tb_save_as, "save")
-            tb_zoom_fit = Gtk4.G_.Button_new_from_icon_name("zoom-fit-best-symbolic")
-            Gtk4.G_.set_tooltip_text(tb_zoom_fit, "zoom to fit")
-            tb_zoom_in = Gtk4.G_.Button_new_from_icon_name("zoom-in-symbolic")
-            Gtk4.G_.set_tooltip_text(tb_zoom_in, "zoom in")
-            tb_zoom_out = Gtk4.G_.Button_new_from_icon_name("zoom-out-symbolic")
-            Gtk4.G_.set_tooltip_text(tb_zoom_out, "zoom out")
-            tb_info = Gtk4.G_.Button_new_from_icon_name("dialog-information-symbolic")
-            Gtk4.G_.set_tooltip_text(tb_info, "ProfileView tips")
+            tb_open = GtkButton(:icon_name,"document-open-symbolic")
+            Gtk4.tooltip_text(tb_open, "open")
+            tb_save_as = GtkButton(:icon_name,"document-save-as-symbolic")
+            Gtk4.tooltip_text(tb_save_as, "save")
+            tb_zoom_fit = GtkButton(:icon_name,"zoom-fit-best-symbolic")
+            Gtk4.tooltip_text(tb_zoom_fit, "zoom to fit")
+            tb_zoom_in = GtkButton(:icon_name,"zoom-in-symbolic")
+            Gtk4.tooltip_text(tb_zoom_in, "zoom in")
+            tb_zoom_out = GtkButton(:icon_name, "zoom-out-symbolic")
+            Gtk4.tooltip_text(tb_zoom_out, "zoom out")
+            tb_info = GtkButton(:icon_name, "dialog-information-symbolic")
+            Gtk4.tooltip_text(tb_info, "ProfileView tips")
             tb_text = GtkEntry()
-            Gtk4.G_.set_has_frame(tb_text, false)
-            Gtk4.G_.set_sensitive(tb_text, false)
+            Gtk4.has_frame(tb_text, false)
+            Gtk4.sensitive(tb_text, false)
             push!(tb, tb_text)
 
             push!(tb, tb_open)
@@ -371,7 +371,7 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
                 b = Gtk4.buffer(tb_text)
                 if sf != StackTraces.UNKNOWN
                     str_long = long_info_str(sf)
-                    Gtk4.G_.set_text(b, str_long, -1)
+                    b[String] = str_long
                     str = string(basename(string(sf.file)), ", ", sf.func, ": line ", sf.line)
                     set_source(ctx, fcolor(:font))
                     Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
@@ -379,7 +379,7 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
                     xmin, xmax = minimum(xi), maximum(xi)
                     lasttextbb[] = deform(Cairo.text(ctx, xu, yu, str, halign = xu < (2xmin+xmax)/3 ? "left" : xu < (xmin+2xmax)/3 ? "center" : "right"), -2, 2, -2, 2)
                 else
-                    Gtk4.G_.set_text(b, "", -1)
+                    b[String]=""
                 end
                 reveal(c)
             end
