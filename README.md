@@ -103,8 +103,10 @@ things about this function:
 - `mapslices(sum, A; dims=2)` is considerably more expensive (the corresponding bar is horizontally wider) than
   `mapslices(sort, B; dims=1)`. This is because it has to process more
   data.
+  
+## Color Coding
 
-It is also worth noting that red is (by default) a special color: it is reserved for function
+- **Red**: is reserved for function
 calls that have to be resolved at run-time.
 Because run-time dispatch (aka, dynamic dispatch, run-time method lookup, or
 a virtual call) often has a significant
@@ -123,7 +125,7 @@ contribution to its total run time.
 See [Solving type-inference problems](solving-type-inference-problems) below
 for tips on how to efficiently diagnose the nature of the problem.
 
-Yellow is also a special color: it indicates a site of garbage collection, which can be
+- **Yellow**: indicates a site of garbage collection, which can be
 triggered at a site of memory allocation. You may find that such bars lead you to lines
 whose performance can be improved by reducing the amount of temporary memory allocated
 by your program. One common example is to consider using `@views(A[:, i] .* v)` instead
