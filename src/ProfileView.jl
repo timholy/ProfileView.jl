@@ -16,13 +16,17 @@ using Gtk4, GtkObservables, Colors, FileIO, IntervalSets
 import GtkObservables: Canvas
 import Cairo
 using Graphics
+using Preferences
+using Requires
 
 using FlameGraphs: Node, NodeData
 const CONTROL = Gtk4.ModifierType_CONTROL_MASK
 
-export @profview, warntype_last
+export @profview, warntype_clicked, descend_clicked, ascend_clicked
+@deprecate warntype_last warntype_clicked
 
 const clicked = Ref{Any}(nothing)   # for getting access to the clicked bar
+const clicked_trace = Ref{Any}(nothing)
 
 const _graphtype = Ref{Symbol}(Symbol(@load_preference("graphtype", "flame")))
 const _theme = Ref{Symbol}(Symbol(@load_preference("theme", "light")))
@@ -56,14 +60,16 @@ This setting is retained for the active environment via a `LocalPreferences.toml
 set_theme!(theme::Symbol) = set_preference!(_theme, "theme", theme, (:light, :dark))
 
 """
-    warntype_last()
-    warntype_last(io::IO; kwargs...)
+    warntype_clicked()
+    warntype_clicked(io::IO; kwargs...)
 
 Show `code_warntype` for the most recently-clicked bar.
 
 Optionally direct output to stream `io`. Keyword arguments are passed to `code_warntype`.
+
+See also: [`descend_clicked`](@ref).
 """
-function warntype_last(io::IO=stdout; kwargs...)
+function warntype_clicked(io::IO=stdout; kwargs...)
     st = clicked[]
     if st === nothing || st.linfo === nothing
         @warn "click on a non-inlined bar to see `code_warntype` info"
@@ -71,6 +77,30 @@ function warntype_last(io::IO=stdout; kwargs...)
     end
     return code_warntype(io, call_type(st.linfo.specTypes)...; kwargs...)
 end
+
+"""
+    descend_clicked(; optimize=false, iswarn=true, hide_type_stable=true, kwargs...)
+
+Run [Cthulhu's](https://github.com/JuliaDebug/Cthulhu.jl) `descend` for the most recently-clicked bar.
+To make this function available, you must be `using Cthulhu` in your session.
+
+Keyword arguments control the initial view mode.
+
+See also: [`ascend_clicked`](@ref), [`descend_warntype`](@ref)
+"""
+function descend_clicked end
+
+"""
+    ascend_clicked(; hide_type_stable=true, kwargs...)
+
+Run [Cthulhu's](https://github.com/JuliaDebug/Cthulhu.jl) `ascend` for the most recently-clicked bar.
+To make this function available, you must be `using Cthulhu` in your session.
+
+Keyword arguments control the initial view mode.
+
+See also: [`descend_clicked`](@ref)
+"""
+function ascend_clicked end
 
 mutable struct ZoomCanvas
     bb::BoundingBox  # in user-coordinates
@@ -310,7 +340,12 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
         Y = size(tagimg, 2)
         x = max(1, min(x, size(tagimg, 1)))
         y = max(1, min(y, Y))
-        tagimg[x,Y-y+1]
+        I = x, Y-y+1
+        if checkbounds(Bool, tagimg, I...)
+            tagimg[I...]
+        else
+            StackTraces.UNKNOWN
+        end
     end
     function device_bb(c)
         if graphtype == :icicle
@@ -398,6 +433,15 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
                     elseif btn.button == 3
                         edit(string(sf.file), sf.line)
                     end
+                    # Also collect the trace
+                    Y = size(tagimg, 2)
+                    trace = [sf]
+                    yu += 1
+                    while yu < Y
+                        push!(trace, gettag(tagimg, xu, yu))
+                        yu += 1
+                    end
+                    clicked_trace[] = trace
                 end
             end
         end
@@ -485,7 +529,7 @@ end
 
     The toolbar at the top includes icons to load and save profile data. Clicking the save icon will prompt you for a filename; you should use extension *.jlprof for any file you save. Launching `ProfileView.view(nothing)` opens a blank window, which you can populate with saved data by clicking on the "open" icon.
 
-    After clicking on a bar, you can type `warntype_last()` and see the result of `code_warntype` for the call represented by that bar.
+    After clicking on a bar, you can type `warntype_clicked()` and see the result of `code_warntype` for the call represented by that bar. Alterntively, use `descend_clicked` (requires loading Cthulhu.jl).
 
     `ProfileView.view(windowname="method1")` allows you to name your window, which can help avoid confusion when opening several ProfileView windows simultaneously.
 
@@ -513,6 +557,36 @@ end
 
 discardfirstcol(A) = A[:,2:end]
 discardfirstcol(A::IndirectArray) = IndirectArray(A.index[:,2:end], A.values)
+
+function __init__()
+    @require Cthulhu="f68482b8-f384-11e8-15f7-abe071a5a75f" begin
+        function descend_clicked(; optimize=false, iswarn=true, hide_type_stable=true, kwargs...)
+            st = clicked[]
+            if st === nothing || st.linfo === nothing
+                @warn "the bar you clicked on might have been inlined and unavailable for inspection. Click on a non-inlined bar to `descend`."
+                return nothing
+            end
+            return Cthulhu.descend(st.linfo; optimize, iswarn, hide_type_stable, kwargs...)
+        end
+        function ascend_clicked(; hide_type_stable=true, kwargs...)
+            st = clicked[]
+            if st === nothing || st.linfo === nothing
+                @warn "the bar you clicked on might have been inlined and unavailable for inspection. Click on a non-inlined bar to `descend`."
+                return nothing
+            end
+            if hasmethod(Cthulhu.buildframes, Tuple{Vector{StackTraces.StackFrame}})
+                return Cthulhu.ascend(clicked_trace[]; hide_type_stable, kwargs...)
+            else
+                return Cthulhu.ascend(st.linfo; hide_type_stable, kwargs...)
+            end
+        end
+    end
+    Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
+        if (exc.f === descend_clicked || exc.f === ascend_clicked) && isempty(argtypes)
+            printstyled(io, "\n`using Cthulhu` is required for `$(exc.f)`"; color=:yellow)
+        end
+    end
+end
 
 using SnoopPrecompile
 
