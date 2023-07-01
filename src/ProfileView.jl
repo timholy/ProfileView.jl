@@ -12,8 +12,8 @@ using Base.StackTraces: StackFrame
 using MethodAnalysis
 using InteractiveUtils
 using Preferences
-using Gtk4, Gtk4Observables, Colors, FileIO, IntervalSets
-import Gtk4Observables: Canvas
+using Gtk4, GtkObservables, Colors, FileIO, IntervalSets
+import GtkObservables: Canvas
 import Cairo
 using Graphics
 
@@ -262,8 +262,8 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             # don't use the actual taskid as the tab as it's very long
             push!(nb_tasks, bx, task_tab_num == 1 ? string(task_tab) : string(task_tab_num - 1))
             fdraw = viewprof(fcolor, c, gsig, (tb_zoom_fit, tb_zoom_out, tb_zoom_in, tb_text), graphtype; kwargs...)
-            Gtk4Observables.gc_preserve(nb_threads, c)
-            Gtk4Observables.gc_preserve(nb_threads, fdraw)
+            GtkObservables.gc_preserve(nb_threads, c)
+            GtkObservables.gc_preserve(nb_threads, fdraw)
             _c, _fdraw, _tb_open, _tb_save_as = c, fdraw, tb_open, tb_save_as
             task_tab_num += 1
         end
@@ -451,7 +451,7 @@ function _save(selection, args...)
 end
 
 @guarded function zoom_fit_cb(::Ptr, zr::Observable{ZoomRegion{T}}) where {T}
-    zr[] = Gtk4Observables.reset(zr[])
+    zr[] = GtkObservables.reset(zr[])
     return nothing
 end
 
