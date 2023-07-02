@@ -11,11 +11,11 @@ using FlameGraphs.IndirectArrays
 using Base.StackTraces: StackFrame
 using MethodAnalysis
 using InteractiveUtils
-using Preferences
 using Gtk4, GtkObservables, Colors, FileIO, IntervalSets
 import GtkObservables: Canvas
 import Cairo
 using Graphics
+using Preferences
 using Preferences
 using Requires
 
@@ -284,7 +284,7 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             # FIXME: likely have to do `allkwargs` in the open/save below (add in C, combine, recur)
             signal_connect(open_cb, tb_open, "clicked", Nothing, (), false, (widget(c),gsig,kwargs))
             signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict,g))
-            signal_connect(info_cb, tb_info, "clicked", Nothing, (), false, ())
+            signal_connect(info_cb, tb_info, "clicked", Nothing, (), false, (widget(c),))
 
             bx = GtkBox(:v)
             push!(bx, tb)
@@ -509,7 +509,7 @@ end
     return nothing
 end
 
-@guarded function info_cb(::Ptr, ::Tuple)
+@guarded function info_cb(::Ptr, win::Tuple)
     # Note: Keep this updated with the readme
     info = """
     ProfileView.jl Interface Tips
@@ -539,7 +539,7 @@ end
 
     Color theme: The color theme used for the graph is `:light`, which can be changed to `:dark` via `ProfileView.set_theme!(:dark)`
     """
-    info_dialog(info) do
+    info_dialog(info, toplevel(win[1])) do
         nothing
     end
     return nothing
