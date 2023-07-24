@@ -588,10 +588,10 @@ function __init__()
     end
 end
 
-using SnoopPrecompile
+using PrecompileTools
 
 let
-    @precompile_setup begin
+    @setup_workload begin
         stackframe(func, file, line; C=false) = StackFrame(Symbol(func), Symbol(file), line, nothing, C, false, 0)
 
         backtraces = UInt64[0, 4, 3, 2, 1,   # order: calles then caller
@@ -610,7 +610,7 @@ let
                                         6=>stackframe(:f5, :file3, 1),
                                         7=>stackframe(:f1, :file1, 2),
                                         8=>stackframe(:f6, :file3, 10))
-        @precompile_all_calls begin
+        @compile_workload begin
             g = flamegraph(backtraces; lidict=lidict)
             gdict = Dict(tabname_allthreads => Dict(tabname_alltasks => g))
             win, c, fdraw = viewgui(FlameGraphs.default_colors, gdict)

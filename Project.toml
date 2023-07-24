@@ -1,7 +1,7 @@
 name = "ProfileView"
 uuid = "c46f51b8-102a-5cf2-8d2c-8597cb0e0da7"
 author = ["Tim Holy <tim.holy@gmail.com>"]
-version = "1.7.1"
+version = "1.7.2"
 
 [deps]
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"
@@ -18,7 +18,7 @@ MethodAnalysis = "85b6ec6f-f7df-4429-9514-a64bcd9ee824"
 Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 Profile = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
 Requires = "ae029012-a4dd-5104-9daa-d747884805df"
-SnoopPrecompile = "66db9d55-30c0-4569-8b51-7e840670fc0c"
+PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
@@ -33,7 +33,7 @@ IntervalSets = "0.2, 0.3, 0.4, 0.5, 0.6, 0.7"
 MethodAnalysis = "0.4"
 Preferences = "1.2"
 Requires = "1"
-SnoopPrecompile = "1"
+PrecompileTools = "1"
 julia = "1.6"
 
 [extras]
