@@ -16,7 +16,6 @@ import GtkObservables: Canvas
 import Cairo
 using Graphics
 using Preferences
-using Preferences
 using Requires
 
 using FlameGraphs: Node, NodeData
@@ -116,13 +115,13 @@ macro profview(ex)
     return quote
         Profile.clear()
         # pause the eventloop while profiling
-        #before = Gtk4.GLib.is_loop_running()
+        before = Gtk4.GLib.is_loop_running()
         dt = Dates.now()
         try
-            #Gtk4.GLib.stop_main_loop()
+            Gtk4.GLib.stop_main_loop(true)
             @profile $(esc(ex))
         finally
-            #Gtk4.GLib.start_main_loop()
+            before && Gtk4.GLib.start_main_loop()
         end
         view(;windowname = "Profile  -  $(Time(round(dt, Second)))")
     end
@@ -200,7 +199,9 @@ function view(data::Vector{UInt64}; lidict=nothing, kwargs...)
 end
 function view(; kwargs...)
     # pausing the event loop here to facilitate a fast retrieve
-    data, lidict = Profile.retrieve()
+    data, lidict = Gtk4.GLib.pause_main_loop() do
+        Profile.retrieve()
+    end
     view(_theme_colors[_theme[]], data; lidict=lidict, kwargs...)
 end
 

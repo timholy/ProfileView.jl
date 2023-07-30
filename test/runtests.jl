@@ -5,8 +5,6 @@ using Gtk4
 using AbstractTrees
 using Test
 
-Gtk4.GLib.start_main_loop()  # the loop only starts automatically if isinteractive() == true
-
 function profile_test(n)
     for i = 1:n
         A = randn(100,100,20)
@@ -39,6 +37,7 @@ function add2(x)
 end
 
 @testset "ProfileView" begin
+    Gtk4.GLib.start_main_loop(true)  # the loop only starts automatically if isinteractive() == true
     @testset "windows" begin
         profile_test(1)
         @test isa(@profview(profile_test(10)), ProfileView.GtkWindow)
