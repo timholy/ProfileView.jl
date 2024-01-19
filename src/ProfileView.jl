@@ -271,7 +271,7 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             tb_text = GtkEntry()
             Gtk4.has_frame(tb_text, false)
             Gtk4.sensitive(tb_text, false)
-            push!(tb, tb_text)
+            tb_text.hexpand = true
 
             push!(tb, tb_open)
             push!(tb, tb_save_as)
@@ -282,6 +282,7 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             push!(tb, GtkSeparator(:h))
             push!(tb, tb_info)
             push!(tb, GtkSeparator(:h))
+            push!(tb, tb_text)
             # FIXME: likely have to do `allkwargs` in the open/save below (add in C, combine, recur)
             signal_connect(open_cb, tb_open, "clicked", Nothing, (), false, (widget(c),gsig,kwargs))
             signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict,g))
