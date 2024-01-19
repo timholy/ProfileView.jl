@@ -485,6 +485,8 @@ end
         isempty(selection) && return nothing
         if data === nothing && lidict === nothing
             _save(selection, g)
+        else
+            _save(selection, data, lidict)
         end
     end
     return nothing
