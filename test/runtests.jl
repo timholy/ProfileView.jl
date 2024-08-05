@@ -147,7 +147,9 @@ end
         g = ProfileView.flamegraph()
         win, c, fdraw, (tb_open, tb_save_as) = ProfileView.viewgui(ProfileView.FlameGraphs.default_colors, g);
         ProfileView.Gtk4.show(win)
-        sleep(1.0)
+        while !isdefined(c.widget,:backcc)
+            sleep(1.0)
+        end
         sz = size(ProfileView.flamepixels(ProfileView.FlameGraphs.default_colors, g))
         mktemp() do path, io
             redirect_stdout(io) do
