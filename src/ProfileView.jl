@@ -612,6 +612,7 @@ let
             end
             precompile(fdraw)
             closeall()   # necessary to prevent serialization of stale references (including the internal `empty!`)
+            Gtk.enable_eventloop(false, wait_stopped = true) # to avoid trailing task warning
         end
     end
 end
