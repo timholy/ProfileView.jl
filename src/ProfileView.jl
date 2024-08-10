@@ -255,6 +255,7 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             set_gtk_property!(widget(c), :vexpand, true)
 
             f = GtkFrame(c)
+            Gtk4.css_classes(f, ["squared"])
             tb = GtkBox(:h)
             tb_open = GtkButton(:icon_name,"document-open-symbolic")
             Gtk4.tooltip_text(tb_open, "open")
@@ -364,7 +365,7 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
     img, tagimg = img[:,2:end], discardfirstcol(tagimg)
     img24 = RGB24.(img)
     img24 = img24[:,end:-1:1]
-    fv = XY(0.0..size(img24,1), 0.0..size(img24,2))
+    fv = XY(0.5..size(img24,1)-0.5, 0.5..size(img24,2)-0.5)
     zr = Observable(ZoomRegion(fv, fv))
     signal_connect(zoom_fit_cb, tb_zoom_fit, "clicked", Nothing, (), false, (zr))
     signal_connect(zoom_out_cb, tb_zoom_out, "clicked", Nothing, (), false, (zr))
@@ -590,6 +591,12 @@ function __init__()
             printstyled(io, "\n`using Cthulhu` is required for `$(exc.f)`"; color=:yellow)
         end
     end
+    # by default GtkFrame uses rounded corners
+    css="""
+        .squared {border-radius: 0;}
+    """
+    cssprov=GtkCssProvider(css)
+    push!(GdkDisplay(), cssprov, Gtk4.STYLE_PROVIDER_PRIORITY_APPLICATION)
 end
 
 using PrecompileTools
