@@ -158,9 +158,7 @@ end
                 end
             end
             flush(io)
-            str=read(path, String)
-            println("lines: $(countlines(IOBuffer(str)))")
-            @test occursin("MethodInstance", str)
+            @test occursin("MethodInstance", read(path, String))
         end
 
 
