@@ -143,7 +143,7 @@ end
 
         # Also click on real stackframes
         Profile.clear()
-        @profile profile_test(10)
+        @profile profile_test(100)
         g = ProfileView.flamegraph()
         win, c, fdraw, (tb_open, tb_save_as) = ProfileView.viewgui(ProfileView.FlameGraphs.default_colors, g);
         ProfileView.Gtk4.show(win)
@@ -158,7 +158,9 @@ end
                 end
             end
             flush(io)
-            @test occursin("MethodInstance", read(path, String))
+            str=read(path, String)
+            println("lines: $(countlines(IOBuffer(str)))")
+            @test occursin("MethodInstance", str)
         end
 
 
