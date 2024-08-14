@@ -11,14 +11,15 @@ using FlameGraphs.IndirectArrays
 using Base.StackTraces: StackFrame
 using MethodAnalysis
 using InteractiveUtils
-using Gtk.ShortNames, GtkObservables, Colors, FileIO, IntervalSets
+using Gtk4, GtkObservables, Colors, FileIO, IntervalSets
+import GtkObservables: Canvas
 import Cairo
 using Graphics
 using Preferences
 using Requires
 
 using FlameGraphs: Node, NodeData
-using Gtk.GConstants.GdkModifierType: SHIFT, CONTROL, MOD1
+const CONTROL = Gtk4.ModifierType_CONTROL_MASK
 
 export @profview, warntype_clicked, descend_clicked, ascend_clicked
 @deprecate warntype_last warntype_clicked
@@ -114,13 +115,13 @@ macro profview(ex)
     return quote
         Profile.clear()
         # pause the eventloop while profiling
-        before = Gtk.is_eventloop_running()
+        before = Gtk4.GLib.is_loop_running()
         dt = Dates.now()
         try
-            Gtk.enable_eventloop(false, wait_stopped = true)
+            Gtk4.GLib.stop_main_loop(true)
             @profile $(esc(ex))
         finally
-            Gtk.enable_eventloop(before, wait_stopped = true)
+            before && Gtk4.GLib.start_main_loop()
         end
         view(;windowname = "Profile  -  $(Time(round(dt, Second)))")
     end
@@ -139,7 +140,7 @@ function closeall()
     return nothing
 end
 
-const window_wrefs = WeakKeyDict{Gtk.GtkWindowLeaf,Nothing}()
+const window_wrefs = WeakKeyDict{Gtk4.GtkWindowLeaf,Nothing}()
 const tabname_allthreads = Symbol("All Threads")
 const tabname_alltasks = Symbol("All Tasks")
 
@@ -153,7 +154,7 @@ You have several options to control the output, of which the major ones are:
 - `fcolor`: an optional coloration function. The main options are `FlameGraphs.FlameColors`
   and `FlameGraphs.StackFrameCategory`.
 - `C::Bool = false`: if true, the graph will include stackframes from C code called by Julia.
-- `recur`: on Julia 1.4+, collapse recursive calls (see `Profile.print` for more detail)
+- `recur`: collapse recursive calls (see `Profile.print` for more detail)
 - `expand_threads::Bool = true`: Break down profiling by thread (true by default)
 - `expand_tasks::Bool = false`: Break down profiling of each thread by task (false by default)
 - `graphtype::Symbol = :default`: Control how the graph is shown. `:flame` displays from the bottom up, `:icicle` from
@@ -198,7 +199,7 @@ function view(data::Vector{UInt64}; lidict=nothing, kwargs...)
 end
 function view(; kwargs...)
     # pausing the event loop here to facilitate a fast retrieve
-    data, lidict = Gtk.pause_eventloop() do
+    data, lidict = Gtk4.GLib.pause_main_loop() do
         Profile.retrieve()
     end
     view(_theme_colors[_theme[]], data; lidict=lidict, kwargs...)
@@ -213,14 +214,14 @@ function view(g::Node{NodeData}; kwargs...)
 end
 function view(fcolor, g::Node{NodeData}; data=nothing, lidict=nothing, kwargs...)
     win, _ = viewgui(fcolor, g; data=data, lidict=lidict, kwargs...)
-    Gtk.showall(win)
+    win
 end
 function view(g_or_gdict::Union{Node{NodeData},NestedGraphDict}; kwargs...)
     view(_theme_colors[_theme[]], g_or_gdict; kwargs...)
 end
 function view(fcolor, g_or_gdict::Union{Node{NodeData},NestedGraphDict}; data=nothing, lidict=nothing, kwargs...)
     win, _ = viewgui(fcolor, g_or_gdict; data=data, lidict=lidict, kwargs...)
-    Gtk.showall(win)
+    win
 end
 
 function viewgui(fcolor, g::Node{NodeData}; kwargs...)
@@ -233,9 +234,9 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
         graphtype = _graphtype[]
     end
     thread_tabs = collect(keys(gdict))
-    nb_threads = Notebook() # for holding the per-thread pages
-    Gtk.GAccessor.scrollable(nb_threads, true)
-    Gtk.GAccessor.show_tabs(nb_threads, length(thread_tabs) > 1)
+    nb_threads = GtkNotebook() # for holding the per-thread pages
+    Gtk4.scrollable(nb_threads, true)
+    Gtk4.show_tabs(nb_threads, length(thread_tabs) > 1)
     sort!(thread_tabs, by = s -> something(tryparse(Int, string(s)), 0)) # sorts thread_tabs as [all threads, 1, 2, 3 ....]
 
     for thread_tab in thread_tabs
@@ -243,57 +244,56 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
         task_tabs = collect(keys(gdict_thread))
         sort!(task_tabs, by = s -> s == tabname_alltasks ? "" : string(s)) # sorts thread_tabs as [all threads, 0xds ....]
 
-        nb_tasks = Notebook() # for holding the per-task pages
-        Gtk.GAccessor.scrollable(nb_tasks, true)
-        Gtk.GAccessor.show_tabs(nb_tasks, length(task_tabs) > 1)
+        nb_tasks = GtkNotebook() # for holding the per-task pages
+        Gtk4.scrollable(nb_tasks, true)
+        Gtk4.show_tabs(nb_tasks, length(task_tabs) > 1)
         task_tab_num = 1
         for task_tab in task_tabs
             g = gdict_thread[task_tab]
             gsig = Observable(g)  # allow substitution by the open dialog
             c = canvas(UserUnit)
-            set_gtk_property!(widget(c), :expand, true)
+            set_gtk_property!(widget(c), :vexpand, true)
 
-            f = Frame(c)
-            tb = Toolbar()
-            tb_open = ToolButton("gtk-open")
-            Gtk.GAccessor.tooltip_text(tb_open, "open")
-            tb_save_as = ToolButton("gtk-save-as")
-            Gtk.GAccessor.tooltip_text(tb_save_as, "save")
-            tb_zoom_fit = ToolButton("gtk-zoom-fit")
-            Gtk.GAccessor.tooltip_text(tb_zoom_fit, "zoom to fit")
-            tb_zoom_in = ToolButton("gtk-zoom-in")
-            Gtk.GAccessor.tooltip_text(tb_zoom_in, "zoom in")
-            tb_zoom_out = ToolButton("gtk-zoom-out")
-            Gtk.GAccessor.tooltip_text(tb_zoom_out, "zoom out")
-            tb_info = ToolButton("gtk-info")
-            Gtk.GAccessor.tooltip_text(tb_info, "ProfileView tips")
-            tb_text_item = ToolItem()
-            Gtk.GAccessor.expand(tb_text_item, true)
-            tb_text = Entry()
-            Gtk.GAccessor.has_frame(tb_text, false)
-            Gtk.GAccessor.sensitive(tb_text, false)
-            push!(tb_text_item, tb_text)
+            f = GtkFrame(c)
+            Gtk4.css_classes(f, ["squared"])
+            tb = GtkBox(:h)
+            tb_open = GtkButton(:icon_name,"document-open-symbolic")
+            Gtk4.tooltip_text(tb_open, "open")
+            tb_save_as = GtkButton(:icon_name,"document-save-as-symbolic")
+            Gtk4.tooltip_text(tb_save_as, "save")
+            tb_zoom_fit = GtkButton(:icon_name,"zoom-fit-best-symbolic")
+            Gtk4.tooltip_text(tb_zoom_fit, "zoom to fit")
+            tb_zoom_in = GtkButton(:icon_name,"zoom-in-symbolic")
+            Gtk4.tooltip_text(tb_zoom_in, "zoom in")
+            tb_zoom_out = GtkButton(:icon_name, "zoom-out-symbolic")
+            Gtk4.tooltip_text(tb_zoom_out, "zoom out")
+            tb_info = GtkButton(:icon_name, "dialog-information-symbolic")
+            Gtk4.tooltip_text(tb_info, "ProfileView tips")
+            tb_text = GtkEntry()
+            Gtk4.has_frame(tb_text, false)
+            Gtk4.sensitive(tb_text, false)
+            tb_text.hexpand = true
 
             push!(tb, tb_open)
             push!(tb, tb_save_as)
-            push!(tb, SeparatorToolItem())
+            push!(tb, GtkSeparator(:h))
             push!(tb, tb_zoom_fit)
             push!(tb, tb_zoom_out)
             push!(tb, tb_zoom_in)
-            push!(tb, SeparatorToolItem())
+            push!(tb, GtkSeparator(:h))
             push!(tb, tb_info)
-            push!(tb, SeparatorToolItem())
-            push!(tb, tb_text_item)
+            push!(tb, GtkSeparator(:h))
+            push!(tb, tb_text)
             # FIXME: likely have to do `allkwargs` in the open/save below (add in C, combine, recur)
             signal_connect(open_cb, tb_open, "clicked", Nothing, (), false, (widget(c),gsig,kwargs))
             signal_connect(save_as_cb, tb_save_as, "clicked", Nothing, (), false, (widget(c),data,lidict,g))
-            signal_connect(info_cb, tb_info, "clicked", Nothing, (), false, ())
+            signal_connect(info_cb, tb_info, "clicked", Nothing, (), false, (widget(c),))
 
-            bx = Box(:v)
+            bx = GtkBox(:v)
             push!(bx, tb)
             push!(bx, f)
             # don't use the actual taskid as the tab as it's very long
-            push!(nb_tasks, bx, task_tab_num == 1 ? task_tab : Symbol(task_tab_num - 1))
+            push!(nb_tasks, bx, task_tab_num == 1 ? string(task_tab) : string(task_tab_num - 1))
             fdraw = viewprof(fcolor, c, gsig, (tb_zoom_fit, tb_zoom_out, tb_zoom_in, tb_text), graphtype; kwargs...)
             GtkObservables.gc_preserve(nb_threads, c)
             GtkObservables.gc_preserve(nb_threads, fdraw)
@@ -303,12 +303,12 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
         push!(nb_threads, nb_tasks, string(thread_tab))
     end
 
-    bx = Box(:v)
+    bx = GtkBox(:v)
     push!(bx, nb_threads)
 
     # Defer creating the window until here because Window includes a `show` that will unpause the Gtk eventloop
-    win = Window(windowname, 800, 600)
-    push!(win, bx)
+    win = GtkWindow(windowname, 800, 600)
+    win[] = bx
 
     # Register the window with closeall
     window_wrefs[win] = nothing
@@ -317,12 +317,8 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
     end
 
     # Ctrl-w and Ctrl-q destroy the window
-    signal_connect(win, "key-press-event") do w, evt
-        if evt.state == CONTROL && (evt.keyval == UInt('q') || evt.keyval == UInt('w'))
-            @async destroy(w)
-            nothing
-        end
-    end
+    kc = GtkEventControllerKey(win)
+    signal_connect(close_cb, kc, "key-pressed", Cint, (UInt32, UInt32, UInt32), false, (win))
 
     return win, _c, _fdraw, (_tb_open, _tb_save_as)
 end
@@ -369,7 +365,7 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
     img, tagimg = img[:,2:end], discardfirstcol(tagimg)
     img24 = RGB24.(img)
     img24 = img24[:,end:-1:1]
-    fv = XY(0.0..size(img24,1), 0.0..size(img24,2))
+    fv = XY(0.5..size(img24,1)-0.5, 0.5..size(img24,2)-0.5)
     zr = Observable(ZoomRegion(fv, fv))
     signal_connect(zoom_fit_cb, tb_zoom_fit, "clicked", Nothing, (), false, (zr))
     signal_connect(zoom_out_cb, tb_zoom_out, "clicked", Nothing, (), false, (zr))
@@ -393,7 +389,7 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
         lasttextbb = Ref(BoundingBox(1,0,1,0))
         sigmotion = on(c.mouse.motion) do btn
             # Repair image from ovewritten text
-            if c.widget.is_realized && c.widget.is_sized
+            if c.widget.is_sized
                 ctx = getgc(c)
                 if Graphics.width(lasttextbb[]) > 0
                     r = zr[]
@@ -410,9 +406,10 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
                 # Write the info
                 xu, yu = btn.position.x, btn.position.y
                 sf = gettag(tagimg, xu, yu)
+                b = Gtk4.buffer(tb_text)
                 if sf != StackTraces.UNKNOWN
                     str_long = long_info_str(sf)
-                    Gtk.GAccessor.text(tb_text, str_long)
+                    b[String] = str_long
                     str = string(basename(string(sf.file)), ", ", sf.func, ": line ", sf.line)
                     set_source(ctx, fcolor(:font))
                     Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
@@ -420,7 +417,7 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
                     xmin, xmax = minimum(xi), maximum(xi)
                     lasttextbb[] = deform(Cairo.text(ctx, xu, yu, str, halign = xu < (2xmin+xmax)/3 ? "left" : xu < (xmin+2xmax)/3 ? "center" : "right"), -2, 2, -2, 2)
                 else
-                    Gtk.GAccessor.text(tb_text, "")
+                    b[String]=""
                 end
                 reveal(c)
             end
@@ -466,9 +463,11 @@ end
 
 @guarded function open_cb(::Ptr, settings::Tuple)
     c, gsig, kwargs = settings
-    selection = open_dialog("Load profile data", toplevel(c), ("*.jlprof","*"))
-    isempty(selection) && return nothing
-    return _open(gsig, selection; kwargs...)
+    open_dialog("Load profile data", toplevel(c), ("*.jlprof","*")) do selection
+        isempty(selection) && return nothing
+        _open(gsig, selection; kwargs...)
+    end
+    return nothing
 end
 
 function _open(gsig, selection; kwargs...)
@@ -484,12 +483,15 @@ end
 
 @guarded function save_as_cb(::Ptr, profdata::Tuple)
     c, data, lidict, g = profdata
-    selection = save_dialog("Save profile data as *.jlprof file", toplevel(c), ("*.jlprof",))
-    isempty(selection) && return nothing
-    if data === nothing && lidict === nothing
-        return _save(selection, g)
+    save_dialog("Save profile data as *.jlprof file", toplevel(c), ("*.jlprof",)) do selection
+        isempty(selection) && return nothing
+        if data === nothing && lidict === nothing
+            _save(selection, g)
+        else
+            _save(selection, data, lidict)
+        end
     end
-    return _save(selection, data, lidict)
+    return nothing
 end
 
 function _save(selection, args...)
@@ -512,7 +514,7 @@ end
     return nothing
 end
 
-@guarded function info_cb(::Ptr, ::Tuple)
+@guarded function info_cb(::Ptr, win::Tuple)
     # Note: Keep this updated with the readme
     info = """
     ProfileView.jl Interface Tips
@@ -542,8 +544,20 @@ end
 
     Color theme: The color theme used for the graph is `:light`, which can be changed to `:dark` via `ProfileView.set_theme!(:dark)`
     """
-    info_dialog(info)
+    info_dialog(info, toplevel(win[1])) do
+        nothing
+    end
     return nothing
+end
+
+unhandled = convert(Cint, false)
+
+@guarded unhandled function close_cb(::Ptr, keyval::UInt32, keycode::UInt32, state::UInt32, win::GtkWindow)
+    if (ModifierType(state & Gtk4.MODIFIER_MASK) & CONTROL == CONTROL) && (keyval == UInt('q') || keyval == UInt('w'))
+        @async Gtk4.destroy(win)
+        return Cint(1)
+    end
+    return Cint(0)
 end
 
 discardfirstcol(A) = A[:,2:end]
@@ -577,6 +591,12 @@ function __init__()
             printstyled(io, "\n`using Cthulhu` is required for `$(exc.f)`"; color=:yellow)
         end
     end
+    # by default GtkFrame uses rounded corners
+    css="""
+        .squared {border-radius: 0;}
+    """
+    cssprov=GtkCssProvider(css)
+    push!(GdkDisplay(), cssprov, Gtk4.STYLE_PROVIDER_PRIORITY_APPLICATION)
 end
 
 using PrecompileTools
@@ -607,12 +627,12 @@ let
             win, c, fdraw = viewgui(FlameGraphs.default_colors, gdict)
             for obs in c.preserved
                 if isa(obs, Observable) || isa(obs, Observables.ObserverFunction)
-                    precompile(obs)
+                    # FIXME: on MacOS, the following seems to prevent ProfileView from working in the same session where precompiling was done
+                    # precompile(obs)
                 end
             end
             precompile(fdraw)
             closeall()   # necessary to prevent serialization of stale references (including the internal `empty!`)
-            Gtk.enable_eventloop(false, wait_stopped = true) # to avoid trailing task warning
         end
     end
 end
