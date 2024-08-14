@@ -627,7 +627,8 @@ let
             win, c, fdraw = viewgui(FlameGraphs.default_colors, gdict)
             for obs in c.preserved
                 if isa(obs, Observable) || isa(obs, Observables.ObserverFunction)
-                    precompile(obs)
+                    # FIXME: on MacOS, the following seems to prevent ProfileView from working in the same session where precompiling was done
+                    # precompile(obs)
                 end
             end
             precompile(fdraw)
