@@ -144,7 +144,8 @@ const window_wrefs = WeakKeyDict{Gtk4.GtkWindowLeaf,Nothing}()
 const tabname_allthreads = Symbol("All Threads")
 const tabname_alltasks = Symbol("All Tasks")
 
-NestedGraphDict = Dict{Symbol,Dict{Symbol,Node{NodeData}}}
+GraphWithMeta = Tuple{Node{NodeData},Int}
+NestedGraphDict = Dict{Symbol,Dict{Symbol,GraphWithMeta}}
 """
     ProfileView.view([fcolor], data=Profile.fetch(); lidict=nothing, C=false, recur=:off, fontsize=14, windowname="Profile", kwargs...)
 
@@ -167,21 +168,24 @@ function view(fcolor, data::Vector{UInt64}; lidict=nothing, C=false, combine=tru
                 expand_threads::Bool=true, expand_tasks::Bool=false, kwargs...)
     g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned)
     g === nothing && return nothing
+    util = utilization(data)
     # Dict of dicts. Outer is threads, inner is tasks
     # Don't report the tasks at the "all threads" level because their id is thread-specific, so it's not useful
     # to track them across thread TODO: Perhaps fix that in base, so tasks keep the same id across threads?
-    gdict = NestedGraphDict(tabname_allthreads => Dict{Symbol,Node{NodeData}}(tabname_alltasks => g))
+    gdict = NestedGraphDict(tabname_allthreads => Dict{Symbol,GraphWithMeta}(tabname_alltasks => (g, util)))
     if expand_threads && isdefined(Profile, :has_meta) && Profile.has_meta(data)
         for threadid in Profile.get_thread_ids(data)
             g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned, threads = threadid)
-            gdict_inner = Dict{Symbol,Node{NodeData}}(tabname_alltasks => g)
+            util = utilization(data, threads = threadid)
+            gdict_inner = Dict{Symbol,GraphWithMeta}(tabname_alltasks => (g, util))
             if expand_tasks
                 taskids = Profile.get_task_ids(data, threadid)
                 if length(taskids) > 1
                     # skip when there's only one task as it will be the same as "all tasks"
                     for taskid in taskids
                         g = flamegraph(data; lidict=lidict, C=C, combine=combine, recur=recur, pruned=pruned, threads = threadid, tasks = taskid)
-                        gdict_inner[Symbol(taskid)] = g
+                        util = utilization(data, threads = threadid, tasks = taskid)
+                        gdict_inner[Symbol(taskid)] = (g, util)
                     end
                 end
             end
@@ -225,7 +229,7 @@ function view(fcolor, g_or_gdict::Union{Node{NodeData},NestedGraphDict}; data=no
 end
 
 function viewgui(fcolor, g::Node{NodeData}; kwargs...)
-    gdict = NestedGraphDict(tabname_allthreads => Dict{Symbol,Node{NodeData}}(tabname_alltasks => g))
+    gdict = NestedGraphDict(tabname_allthreads => Dict{Symbol,Node{NodeData}}(tabname_alltasks => (g,100)))
     viewgui(fcolor, gdict; kwargs...)
 end
 function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, windowname="Profile", graphtype = :default, kwargs...)
@@ -233,15 +237,15 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
     if graphtype == :default
         graphtype = _graphtype[]
     end
-    thread_tabs = collect(keys(gdict))
+    thread_tabs = collect(keys(gdict)) .* map(g_u -> " $(g_u[2])%", values(gdict))
     nb_threads = GtkNotebook() # for holding the per-thread pages
     Gtk4.scrollable(nb_threads, true)
     Gtk4.show_tabs(nb_threads, length(thread_tabs) > 1)
     sort!(thread_tabs, by = s -> something(tryparse(Int, string(s)), 0)) # sorts thread_tabs as [all threads, 1, 2, 3 ....]
 
     for thread_tab in thread_tabs
-        gdict_thread = gdict[thread_tab]
-        task_tabs = collect(keys(gdict_thread))
+        gdict_thread, _ = gdict[thread_tab]
+        task_tabs = collect(keys(gdict_thread)) .* map(g_u -> " $(g_u[2])%", values(gdict_thread))
         sort!(task_tabs, by = s -> s == tabname_alltasks ? "" : string(s)) # sorts thread_tabs as [all threads, 0xds ....]
 
         nb_tasks = GtkNotebook() # for holding the per-task pages
@@ -249,7 +253,7 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
         Gtk4.show_tabs(nb_tasks, length(task_tabs) > 1)
         task_tab_num = 1
         for task_tab in task_tabs
-            g = gdict_thread[task_tab]
+            g, _ = gdict_thread[task_tab]
             gsig = Observable(g)  # allow substitution by the open dialog
             c = canvas(UserUnit)
             set_gtk_property!(widget(c), :vexpand, true)
@@ -453,6 +457,20 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
     return nothing
 end
 
+function utilization(data::Vector{UInt64}, threads::Union{Int,AbstractVector{Int},Nothing} = nothing, tasks::Union{UInt,AbstractVector{UInt},Nothing} = nothing)
+    sleepstates = UInt[]
+    for i in length(data):-1:1
+        if Profile.is_block_end(data, i)
+            (isnothing(threads) || !in(data[i - Profile.META_OFFSET_THREADID], threads)) && continue
+            (isnothing(tasks) || !in(data[i - Profile.META_OFFSET_TASKID], tasks)) && continue
+            push!(sleepstates, data[i - Profile.META_OFFSET_SLEEPSTATE])
+        end
+    end
+    util = count(isequal(2), sleepstates) / length(sleepstates)
+    util == 0 && return 0
+    return ceil(Int, util * 100)
+end
+
 function long_info_str(sf)
     if sf.linfo isa Core.MethodInstance
         string(sf.file, ':', sf.line, ", ", sf.linfo)
@@ -623,7 +641,7 @@ let
                                         8=>stackframe(:f6, :file3, 10))
         @compile_workload begin
             g = flamegraph(backtraces; lidict=lidict)
-            gdict = Dict(tabname_allthreads => Dict(tabname_alltasks => g))
+            gdict = Dict(tabname_allthreads => Dict(tabname_alltasks => (g,100)))
             win, c, fdraw = viewgui(FlameGraphs.default_colors, gdict)
             for obs in c.preserved
                 if isa(obs, Observable) || isa(obs, Observables.ObserverFunction)
