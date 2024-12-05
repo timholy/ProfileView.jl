@@ -16,7 +16,6 @@ import GtkObservables: Canvas
 import Cairo
 using Graphics
 using Preferences
-using Requires
 
 using FlameGraphs: Node, NodeData
 const CONTROL = Gtk4.ModifierType_CONTROL_MASK
@@ -564,28 +563,6 @@ discardfirstcol(A) = A[:,2:end]
 discardfirstcol(A::IndirectArray) = IndirectArray(A.index[:,2:end], A.values)
 
 function __init__()
-    @require Cthulhu="f68482b8-f384-11e8-15f7-abe071a5a75f" begin
-        function descend_clicked(; optimize=false, iswarn=true, hide_type_stable=true, kwargs...)
-            st = clicked[]
-            if st === nothing || st.linfo === nothing
-                @warn "the bar you clicked on might have been inlined and unavailable for inspection. Click on a non-inlined bar to `descend`."
-                return nothing
-            end
-            return Cthulhu.descend(st.linfo; optimize, iswarn, hide_type_stable, kwargs...)
-        end
-        function ascend_clicked(; hide_type_stable=true, kwargs...)
-            st = clicked[]
-            if st === nothing || st.linfo === nothing
-                @warn "the bar you clicked on might have been inlined and unavailable for inspection. Click on a non-inlined bar to `descend`."
-                return nothing
-            end
-            if hasmethod(Cthulhu.buildframes, Tuple{Vector{StackTraces.StackFrame}})
-                return Cthulhu.ascend(clicked_trace[]; hide_type_stable, kwargs...)
-            else
-                return Cthulhu.ascend(st.linfo; hide_type_stable, kwargs...)
-            end
-        end
-    end
     Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
         if (exc.f === descend_clicked || exc.f === ascend_clicked) && isempty(argtypes)
             printstyled(io, "\n`using Cthulhu` is required for `$(exc.f)`"; color=:yellow)

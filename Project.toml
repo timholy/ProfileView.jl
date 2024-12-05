@@ -1,7 +1,7 @@
 name = "ProfileView"
 uuid = "c46f51b8-102a-5cf2-8d2c-8597cb0e0da7"
 author = ["Tim Holy <tim.holy@gmail.com>"]
-version = "1.8.1"
+version = "1.9.0"
 
 [deps]
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"
@@ -18,27 +18,40 @@ MethodAnalysis = "85b6ec6f-f7df-4429-9514-a64bcd9ee824"
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 Profile = "9abbd945-dff8-562f-b5e8-e1ebf5ef1b79"
-Requires = "ae029012-a4dd-5104-9daa-d747884805df"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
+
+[weakdeps]
+Cthulhu = "f68482b8-f384-11e8-15f7-abe071a5a75f"
+
+[extensions]
+ProfileViewCthulhuExt = "Cthulhu"
 
 [compat]
 Cairo = "0.6, 0.8, 1"
-Colors = "0.9, 0.10, 0.11, 0.12, 0.13"
+Colors = "0.12, 0.13"
+Dates = "1"
+Cthulhu = "2"
 FileIO = "1.6"
 FlameGraphs = "0.2.10, 1"
 Graphics = "0.4, 1"
 Gtk4 = "0.5, 0.6, 0.7"
 GtkObservables = "2"
+InteractiveUtils = "1"
 IntervalSets = "0.2, 0.3, 0.4, 0.5, 0.6, 0.7"
 MethodAnalysis = "0.4"
 PrecompileTools = "1"
 Preferences = "1.2"
-Requires = "1"
-julia = "1.6"
+REPL = "1"
+Profile = "1"
+Test = "1"
+UUIDs = "1"
+julia = "1.10"
 
 [extras]
 AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"
+Cthulhu = "f68482b8-f384-11e8-15f7-abe071a5a75f"
+REPL = "3fa0cd96-eef1-5676-8a61-b3b8758bbffb"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["AbstractTrees", "Test"]
+test = ["AbstractTrees", "Cthulhu", "REPL", "Test"]
