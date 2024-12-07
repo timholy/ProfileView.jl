@@ -88,6 +88,8 @@ end
 
         @test isa(ProfileView.view(nothing), ProfileView.GtkWindow)
 
+        ProfileView.closeall()
+
         # Interactivity
         stackframe(func, file, line; C=false) = ProfileView.StackFrame(Symbol(func), Symbol(file), line, nothing, C, false, 0)
 
@@ -180,4 +182,13 @@ end
         ProfileView.clicked[] = st[idx]
         @test_logs (:warn, "click on a non-inlined bar to see `code_warntype` info") warntype_clicked(io) === nothing
     end
+
+    @testset "error hints" begin
+        if !isdefined(@__MODULE__, :Cthulhu)
+            @test_throws "`using Cthulhu` is required" ProfileView.descend_clicked()
+            @test_throws "`using Cthulhu` is required" ProfileView.ascend_clicked()
+        end
+    end
 end
+
+include("extensions.jl")

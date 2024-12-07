@@ -21,14 +21,14 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
-        version: ['1.6', '1', 'pre']
+        version: ['1.10', '1', 'pre']
         arch: [x64]
         include:
           - os: ubuntu-latest
             prefix: xvfb-run
         exclude:
           - os: windows-latest
-            version: '1.6' # slow registry cloning on CI
+            version: '1.10' # slow registry cloning on CI
     steps:
       - uses: actions/checkout@v4
       - uses: julia-actions/setup-julia@v2
