@@ -568,6 +568,10 @@ function __init__()
             printstyled(io, "\n`using Cthulhu` is required for `$(exc.f)`"; color=:yellow)
         end
     end
+    if !Gtk4.initialized[]
+        error("Gtk4 not initialized")
+        return
+    end
     # by default GtkFrame uses rounded corners
     css="""
         .squared {border-radius: 0;}
