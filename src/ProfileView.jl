@@ -277,6 +277,8 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             Gtk4.tooltip_text(tb_zoom_out, "zoom out")
             tb_info = GtkButton(:icon_name, "dialog-information-symbolic")
             Gtk4.tooltip_text(tb_info, "ProfileView tips")
+            tb_labels = GtkButton(:icon_name, "font-x-generic-symbolic")
+            Gtk4.tooltip_text(tb_labels, "Show labels")
             tb_text = GtkEntry()
             Gtk4.has_frame(tb_text, false)
             Gtk4.sensitive(tb_text, false)
@@ -291,6 +293,8 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             push!(tb, GtkSeparator(:h))
             push!(tb, tb_info)
             push!(tb, GtkSeparator(:h))
+            push!(tb, tb_labels)
+            push!(tb, GtkSeparator(:h))
             push!(tb, tb_text)
             # FIXME: likely have to do `allkwargs` in the open/save below (add in C, combine, recur)
             signal_connect(open_cb, tb_open, "clicked", Nothing, (), false, (widget(c),gsig,kwargs))
@@ -302,7 +306,7 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
             push!(bx, f)
             # don't use the actual taskid as the tab as it's very long
             push!(nb_tasks, bx, task_tab_num == 1 ? string(task_tab) : string(task_tab_num - 1))
-            fdraw = viewprof(fcolor, c, gsig, (tb_zoom_fit, tb_zoom_out, tb_zoom_in, tb_text), graphtype; kwargs...)
+            fdraw = viewprof(fcolor, c, gsig, (tb_zoom_fit, tb_zoom_out, tb_zoom_in, tb_labels, tb_text), graphtype; kwargs...)
             GtkObservables.gc_preserve(nb_threads, c)
             GtkObservables.gc_preserve(nb_threads, fdraw)
             _c, _fdraw, _tb_open, _tb_save_as = c, fdraw, tb_open, tb_save_as
@@ -343,7 +347,7 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
     if !in(graphtype, (:flame, :icicle))
         throw(ArgumentError("Invalid option for `graphtype`: `$(repr(graphtype))`. Valid options are `:flame` and `:icicle`"))
     end
-    tb_zoom_fit, tb_zoom_out, tb_zoom_in, tb_text = tb_items
+    tb_zoom_fit, tb_zoom_out, tb_zoom_in, tb_labels, tb_text = tb_items
     # From a given position, find the underlying tag
     function gettag(tagimg, xu, yu)
         x = ceil(Int, Float64(xu))
@@ -365,6 +369,8 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
             BoundingBox(0, Graphics.width(c), 0, Graphics.height(c))
         end
     end
+    row_height(c, bb_cv) = (Graphics.height(c) / ((bb_cv.ymax - bb_cv.ymin) + 1))
+    min_row_height_show_labels = 5 # Empirically defined on macOS based on text readablility
 
     isempty(g.data.span) && return nothing
     img = flamepixels(fcolor, g)
@@ -378,6 +384,8 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
     signal_connect(zoom_fit_cb, tb_zoom_fit, "clicked", Nothing, (), false, (zr))
     signal_connect(zoom_out_cb, tb_zoom_out, "clicked", Nothing, (), false, (zr))
     signal_connect(zoom_in_cb, tb_zoom_in, "clicked", Nothing, (), false, (zr))
+    show_labels = Observable{Bool}(false) # TODO: default on? Preference?
+    signal_connect(toggle_labels_cb, tb_labels, "clicked", Nothing, (), false, (show_labels))
     sigrb = init_zoom_rubberband(c, zr)
     sigpd = init_pan_drag(c, zr)
     sigzs = init_zoom_scroll(c, zr)
@@ -385,27 +393,81 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
     surf = Cairo.CairoImageSurface(img24)
     append!(c.preserved, Any[sigrb, sigpd, sigzs, sigps])
     let tagimg=tagimg    # julia#15276
-        sigredraw = draw(c, zr) do widget, r
+        sigredraw = draw(c, zr, show_labels) do widget, r, _show_labels
             ctx = getgc(widget)
-            set_coordinates(ctx, device_bb(ctx), BoundingBox(r.currentview))
-            rectangle(ctx, BoundingBox(r.currentview))
+            bb_cv = BoundingBox(r.currentview)
+            set_coordinates(ctx, device_bb(ctx), bb_cv)
+            rectangle(ctx, bb_cv)
             set_source(ctx, surf)
             p = Cairo.get_source(ctx)
             Cairo.pattern_set_filter(p, Cairo.FILTER_NEAREST)
             fill(ctx)
+            row_h = row_height(c, bb_cv)
+            rows_tall_enough = row_h > min_row_height_show_labels
+            if _show_labels && rows_tall_enough
+                seen_sfs = IdDict{StackFrame, Tuple{Int, Int, Int, Int}}()  # Store bounding boxes
+                for y in axes(tagimg, 2)
+                    for x in axes(tagimg, 1)
+                        sf = gettag(tagimg, x, y - 0.5)
+                        sf == StackTraces.UNKNOWN && continue
+                        if !haskey(seen_sfs, sf)
+                            seen_sfs[sf] = (x, y, x, y)  # Initialize bounding box
+                        else
+                            bx, by, ex, ey = seen_sfs[sf]
+                            seen_sfs[sf] = (min(bx, x), min(by, y), max(ex, x), max(ey, y))
+                        end
+                    end
+                end
+                # Render text within each bounding box
+                for (sf, (bx, _by, ex, _ey)) in seen_sfs
+                    for by in _by:_ey # workaround when a sf is repeated on two rows
+                        ey = by
+                        d_bb = device_bb(ctx)
+                        set_coordinates(ctx, d_bb, bb_cv)
+                        set_source(ctx, fcolor(:font))
+                        Cairo.set_font_size(ctx, min(row_h, fontsize))
+                        Cairo.select_font_face(ctx, "sans-serif", Cairo.FONT_SLANT_NORMAL, Cairo.FONT_WEIGHT_NORMAL)
+
+                        str = strip(string(sf.func, "  ", basename(string(sf.file)), ":", sf.line))
+                        _, _, tbb_width, tbb_height, _, _ = Cairo.text_extents(ctx, str)
+
+                        # Define clipping region to constrain text
+                        Cairo.rectangle(ctx, bx - 1, by - 1, ex - bx + 1, ey - by + 1)
+                        Cairo.clip(ctx)
+
+                        x_scale = (bb_cv.xmax - bb_cv.xmin) / (d_bb.xmax - d_bb.xmin)
+                        y_scale = (bb_cv.ymax - bb_cv.ymin) / (d_bb.ymax - d_bb.ymin)
+                        x_min, x_max = max(bx, bb_cv.xmin), min(ex, bb_cv.xmax)
+                        y_min, y_max = max(by, bb_cv.ymin), min(ey, bb_cv.ymax)
+                        middle_x = x_min + ((x_max - x_min) / 2)
+                        middle_y = y_min + ((y_max - y_min) / 2) - 0.5 # matches the - 0.5 above during the scan
+                        text_x = middle_x - ((x_scale * tbb_width) / 2) # center-align
+                        text_y = middle_y + ((y_scale * tbb_height) / 2)
+
+                        Cairo.move_to(ctx, text_x, text_y)
+                        Cairo.scale(ctx, x_scale, y_scale) # otherwise text is stretched
+                        Cairo.show_text(ctx, str)
+
+                        Cairo.reset_clip(ctx)
+                    end
+                end
+            end
         end
         lasttextbb = Ref(BoundingBox(1,0,1,0))
         sigmotion = on(c.mouse.motion) do btn
-            # Repair image from ovewritten text
             if c.widget.is_sized
                 ctx = getgc(c)
-                if Graphics.width(lasttextbb[]) > 0
-                    r = zr[]
-                    set_coordinates(ctx, device_bb(ctx), BoundingBox(r.currentview))
+                r = zr[]
+                bb_cv = BoundingBox(r.currentview)
+                set_coordinates(ctx, device_bb(ctx), bb_cv)
+                row_h = row_height(c, bb_cv)
+                rows_tall_enough = row_h > min_row_height_show_labels
+                _show_labels = rows_tall_enough && show_labels[]
+                if !_show_labels && Graphics.width(lasttextbb[]) > 0
                     # The bbox returned by deform/Cairo.text below is malformed when the y-axis is inverted
                     # so redraw the whole screen in :icicle mode
                     # TODO: Fix the bbox for efficient redraw
-                    rectangle(ctx, graphtype == :icicle ? BoundingBox(r.currentview) : lasttextbb[])
+                    rectangle(ctx, graphtype == :icicle ? bb_cv : lasttextbb[])
                     set_source(ctx, surf)
                     p = Cairo.get_source(ctx)
                     Cairo.pattern_set_filter(p, Cairo.FILTER_NEAREST)
@@ -418,12 +480,14 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
                 if sf != StackTraces.UNKNOWN
                     str_long = long_info_str(sf)
                     b[String] = str_long
-                    str = short_info_str(sf)
-                    set_source(ctx, fcolor(:font))
-                    Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
-                    xi = zr[].currentview.x
-                    xmin, xmax = minimum(xi), maximum(xi)
-                    lasttextbb[] = deform(Cairo.text(ctx, xu, yu, str, halign = xu < (2xmin+xmax)/3 ? "left" : xu < (xmin+2xmax)/3 ? "center" : "right"), -2, 2, -2, 2)
+                    if !_show_labels
+                        str = short_info_str(sf)
+                        set_source(ctx, fcolor(:font))
+                        Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
+                        xi = zr[].currentview.x
+                        xmin, xmax = minimum(xi), maximum(xi)
+                        lasttextbb[] = deform(Cairo.text(ctx, xu, yu, str, halign = xu < (2xmin+xmax)/3 ? "left" : xu < (xmin+2xmax)/3 ? "center" : "right"), -2, 2, -2, 2)
+                    end
                 else
                     b[String]=""
                 end
@@ -533,6 +597,11 @@ end
 
 @guarded function zoom_out_cb(::Ptr, zr::Observable{ZoomRegion{T}}) where {T}
     setindex!(zr, zoom(zr[], 2))
+    return nothing
+end
+
+@guarded function toggle_labels_cb(::Ptr, show_labels::Observable{Bool})
+    show_labels[] = !show_labels[]
     return nothing
 end
 
