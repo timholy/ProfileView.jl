@@ -409,7 +409,13 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
                 if sf != StackTraces.UNKNOWN
                     str_long = long_info_str(sf)
                     b[String] = str_long
-                    str = string(basename(string(sf.file)), ", ", sf.func, ": line ", sf.line)
+                    str = if sf.file == :none && sf.line == 0
+                        # some flamegraph producers don't provide file/line info as they are not applicable
+                        # The above values together are identifiers for such cases
+                        string(sf.func) # might not actually be a func, just a name
+                    else
+                        string(basename(string(sf.file)), ", ", sf.func, ": line ", sf.line)
+                    end
                     set_source(ctx, fcolor(:font))
                     Cairo.set_font_face(ctx, "sans-serif $(fontsize)px")
                     xi = zr[].currentview.x
