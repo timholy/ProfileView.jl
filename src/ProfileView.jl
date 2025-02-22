@@ -143,6 +143,14 @@ const window_wrefs = WeakKeyDict{Gtk4.GtkWindowLeaf,Nothing}()
 const tabname_allthreads = Symbol("All Threads")
 const tabname_alltasks = Symbol("All Tasks")
 
+function get_thread_label(threadid::Int)
+    @static if isdefined(Threads, :threadpooldescription)
+        return Symbol(string(threadid , " (", Threads.threadpooldescription(threadid), ")"))
+    else
+        return Symbol(string(threadid , " (", Threads.threadpool(threadid), ")"))
+    end
+end
+
 NestedGraphDict = Dict{Symbol,Dict{Symbol,Node{NodeData}}}
 """
     ProfileView.view([fcolor], data=Profile.fetch(); lidict=nothing, C=false, recur=:off, fontsize=14, windowname="Profile", kwargs...)
@@ -184,7 +192,8 @@ function view(fcolor, data::Vector{UInt64}; lidict=nothing, C=false, combine=tru
                     end
                 end
             end
-            gdict[Symbol(threadid)] = gdict_inner
+            thread_label = get_thread_label(threadid)
+            gdict[thread_label] = gdict_inner
         end
     end
     return view(fcolor, gdict; data=data, lidict=lidict, kwargs...)
@@ -236,12 +245,12 @@ function viewgui(fcolor, gdict::NestedGraphDict; data=nothing, lidict=nothing, w
     nb_threads = GtkNotebook() # for holding the per-thread pages
     Gtk4.scrollable(nb_threads, true)
     Gtk4.show_tabs(nb_threads, length(thread_tabs) > 1)
-    sort!(thread_tabs, by = s -> something(tryparse(Int, string(s)), 0)) # sorts thread_tabs as [all threads, 1, 2, 3 ....]
+    sort!(thread_tabs, by = s -> s == tabname_allthreads ? "000" : string(s)) # sorts thread_tabs as [all threads, 1, 2, 3 ....]
 
     for thread_tab in thread_tabs
         gdict_thread = gdict[thread_tab]
         task_tabs = collect(keys(gdict_thread))
-        sort!(task_tabs, by = s -> s == tabname_alltasks ? "" : string(s)) # sorts thread_tabs as [all threads, 0xds ....]
+        sort!(task_tabs, by = s -> s == tabname_alltasks ? "000" : string(s)) # sorts thread_tabs as [all threads, 0xds ....]
 
         nb_tasks = GtkNotebook() # for holding the per-task pages
         Gtk4.scrollable(nb_tasks, true)
