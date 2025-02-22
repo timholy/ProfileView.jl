@@ -428,7 +428,7 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
                         Cairo.set_font_size(ctx, min(row_h, fontsize))
                         Cairo.select_font_face(ctx, "sans-serif", Cairo.FONT_SLANT_NORMAL, Cairo.FONT_WEIGHT_NORMAL)
 
-                        str = strip(string(sf.func, "  ", basename(string(sf.file)), ":", sf.line))
+                        str = short_info_str(sf)
                         _, _, tbb_width, tbb_height, _, _ = Cairo.text_extents(ctx, str)
 
                         # Define clipping region to constrain text
