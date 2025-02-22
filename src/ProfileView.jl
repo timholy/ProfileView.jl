@@ -574,6 +574,9 @@ function __init__()
             printstyled(io, "\n`using Cthulhu` is required for `$(exc.f)`"; color=:yellow)
         end
     end
+    if !Gtk4.initialized[]
+        error("Gtk4 not initialized")
+    end
     # by default GtkFrame uses rounded corners
     css="""
         .squared {border-radius: 0;}
@@ -607,6 +610,10 @@ let
         @compile_workload begin
             g = flamegraph(backtraces; lidict=lidict)
             gdict = Dict(tabname_allthreads => Dict(tabname_alltasks => g))
+            if !Gtk4.initialized[]
+                @warn("ProfileView precompile skipped: Gtk4 could not be initialized (are you on a headless system?)")
+                return
+            end
             win, c, fdraw = viewgui(FlameGraphs.default_colors, gdict)
             for obs in c.preserved
                 if isa(obs, Observable) || isa(obs, Observables.ObserverFunction)

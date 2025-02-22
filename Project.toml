@@ -1,7 +1,7 @@
 name = "ProfileView"
 uuid = "c46f51b8-102a-5cf2-8d2c-8597cb0e0da7"
 author = ["Tim Holy <tim.holy@gmail.com>"]
-version = "1.9.0"
+version = "1.9.1"
 
 [deps]
 Cairo = "159f3aea-2a34-519c-b102-8c37f9878175"
@@ -34,7 +34,7 @@ Cthulhu = "2"
 FileIO = "1.6"
 FlameGraphs = "0.2.10, 1"
 Graphics = "0.4, 1"
-Gtk4 = "0.5, 0.6, 0.7"
+Gtk4 = "0.7.6"
 GtkObservables = "2"
 InteractiveUtils = "1"
 IntervalSets = "0.2, 0.3, 0.4, 0.5, 0.6, 0.7"
