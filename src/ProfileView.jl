@@ -570,7 +570,6 @@ function __init__()
     end
     if !Gtk4.initialized[]
         error("Gtk4 not initialized")
-        return
     end
     # by default GtkFrame uses rounded corners
     css="""
