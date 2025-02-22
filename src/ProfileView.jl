@@ -466,7 +466,7 @@ function short_info_str(sf)
         # The above values together are identifiers for such cases
         string(sf.func) # might not actually be a func, just a name
     else
-        string(basename(string(sf.file)), ":", sf.line, " ", f.func)
+        string(basename(string(sf.file)), ":", sf.line, " ", sf.func)
     end
 end
 
