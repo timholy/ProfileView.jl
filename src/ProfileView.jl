@@ -453,7 +453,11 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
 end
 
 function long_info_str(sf)
-    if sf.linfo isa Core.MethodInstance
+    if sf.file == :none && sf.line == 0
+        # some flamegraph producers don't provide file/line info as they are not applicable
+        # The above values together are identifiers for such cases
+        string(sf.func) # might not actually be a func, just a name
+    elseif sf.linfo isa Core.MethodInstance
         string(sf.file, ':', sf.line, ", ", sf.linfo)
     else
         string(sf.file, ':', sf.line, ", ", sf.func, " [inlined]")
