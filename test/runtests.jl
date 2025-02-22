@@ -173,7 +173,9 @@ end
         @test_logs (:warn, "click on a non-inlined bar to see `code_warntype` info") warntype_clicked() === nothing
         _, bt = add2(Any[1,2])
         st = stacktrace(bt)
-        ProfileView.clicked[] = st[1]
+        # search for the function because sometimes the first frame is `backtrace()`
+        i = findfirst(sf -> sf.func == :add2, st)
+        ProfileView.clicked[] = st[i]
         io = IOBuffer()
         warntype_clicked(io)
         str = String(take!(io))
