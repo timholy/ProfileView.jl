@@ -16,11 +16,12 @@ import GtkObservables: Canvas
 import Cairo
 using Graphics
 using Preferences
+using IOCapture
 
 using FlameGraphs: Node, NodeData
 const CONTROL = Gtk4.ModifierType_CONTROL_MASK
 
-export @profview, warntype_clicked, descend_clicked, ascend_clicked
+export @profview, warntype_clicked, descend_clicked, ascend_clicked, view_tree
 @deprecate warntype_last warntype_clicked
 
 const clicked = Ref{Any}(nothing)   # for getting access to the clicked bar
@@ -653,6 +654,40 @@ end
 
 discardfirstcol(A) = A[:,2:end]
 discardfirstcol(A::IndirectArray) = IndirectArray(A.index[:,2:end], A.values)
+
+include("treeview.jl")
+using .TreeView: show_profile_tree
+
+"""
+    view_tree([data]; kwargs...)
+
+View profiling results in a collapsible tree view format, similar to how
+`Profile.print` displays the data. This provides a hierarchical view that
+can be expanded and collapsed interactively.
+
+# Arguments
+- `data`: Optional profile data from `Profile.fetch()`. If not provided, will use the current profile data.
+
+# Keyword Arguments
+- All keyword arguments accepted by `Profile.print` including:
+  - `lidict`: Line info dictionary from `Profile.retrieve()`
+  - `C`: If true, includes C functions in the output
+  - `recur`: How to handle recursion (:off, :flat, or :nested)
+  - `noisefloor`: Hide functions with counts below this threshold
+  - `windowname`: Name for the tree view window. Default is "Profile Tree View".
+
+# Examples
+```julia
+# View current profile data
+view_tree()
+
+# View with specific options
+view_tree(C=true, noisefloor=2)
+```
+"""
+function view_tree(data::Vector{UInt64}=Profile.fetch(); lidict=nothing, kwargs...)
+    return show_profile_tree(data; lidict=lidict, kwargs...)
+end
 
 function __init__()
     Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
