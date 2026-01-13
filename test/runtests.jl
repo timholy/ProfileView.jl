@@ -193,4 +193,9 @@ end
     end
 end
 
-include("extensions.jl")
+using Cthulhu
+if Base.pkgversion(Cthulhu) < v"3.0.0-"
+    include("extensions_Cthulhu2.jl")
+else
+    include("extensions.jl")
+end
