@@ -1,5 +1,6 @@
-using ProfileView
 using Cthulhu
+using REPL
+using ProfileView
 if !isdefined(@__MODULE__, :fake_terminal)
     @eval (@__MODULE__) begin
         include(joinpath(pkgdir(Cthulhu), "test", "FakeTerminals.jl"))

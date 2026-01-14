@@ -18,6 +18,7 @@ using Test
 
 @testset "Extensions" begin
     @testset "Cthulhu" begin
+        println("starting Cthulhu extension tests")
         # profile_test(1)   # defined in test/runtests.jl
         # @profile profile_test(10)
         _, bt = add2(Any[1,2])
@@ -25,18 +26,19 @@ using Test
         ProfileView.clicked[] = st[1]
         terminal = VirtualTerminal()
         harness = Testing.@run terminal descend_clicked(; terminal)
-        Testing.wait_for(harness.task)
-        lines = String(readavailable(harness.io))
-        @test occursin("Select a call to descend into", lines)
-        write(terminal, 'q')
+        displayed, text = Testing.read_next(harness)
+        @test occursin("Select a call to descend into", text)
         @test Testing.end_terminal_session(harness)
+        println("finished 1")
         terminal = VirtualTerminal()
         ProfileView.clicked_trace[] = st
         harness = Testing.@run terminal ascend_clicked(; terminal)
-        Testing.wait_for(harness.task)
-        lines = String(readavailable(harness.io))
-        @test occursin("Choose a call for analysis", lines)
-        write(terminal, 'q')
+        # descend into something to generate a next "section" to read,
+        # as VirtualTerminal is designed to read `descend` output
+        write(terminal, :enter)
+        displayed, text = Testing.read_next(harness)
+        @test occursin("Choose a call for analysis", text)
         @test Testing.end_terminal_session(harness)
+        println("finished 2")
     end
 end
