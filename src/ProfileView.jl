@@ -73,8 +73,10 @@ function warntype_clicked(io::IO=stdout; kwargs...)
         @warn "click on a non-inlined bar to see `code_warntype` info"
         return nothing
     end
-    return code_warntype(io, call_type(st.linfo.specTypes)...; kwargs...)
+    return code_warntype(io, call_type(getmi(st.linfo).specTypes)...; kwargs...)
 end
+getmi(mi) = mi
+getmi(ci::Core.CodeInstance) = ci.def
 
 """
     descend_clicked(; optimize=false, iswarn=true, hide_type_stable=true, kwargs...)
@@ -526,12 +528,13 @@ function viewprof_func(fcolor, c, g, fontsize, tb_items, graphtype)
 end
 
 function long_info_str(sf)
+    linfo = getmi(sf.linfo)
     if sf.file == :none && sf.line == 0
         # some flamegraph producers don't provide file/line info as they are not applicable
         # The above values together are identifiers for such cases
         string(sf.func) # might not actually be a func, just a name
-    elseif sf.linfo isa Core.MethodInstance
-        string(sf.file, ':', sf.line, ", ", sf.linfo)
+    elseif linfo isa Core.MethodInstance
+        string(sf.file, ':', sf.line, ", ", linfo)
     else
         string(sf.file, ':', sf.line, ", ", sf.func, " [inlined]")
     end
