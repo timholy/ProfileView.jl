@@ -1,8 +1,11 @@
 using Profile
-using ProfileView
 using GtkObservables
 using Gtk4
 using AbstractTrees
+# Loading these before ProfileView ensures valid cache versions
+using REPL
+using Cthulhu
+using ProfileView
 using Test
 
 function profile_test(n)
@@ -37,11 +40,16 @@ function add2(x)
 end
 
 @testset "ProfileView" begin
+    println("starting ProfileView tests")
     Gtk4.GLib.start_main_loop(true)  # the loop only starts automatically if isinteractive() == true
+    println("main loop started")
     @testset "windows" begin
         profile_test(1)
+        println("profiling done 1")
         @test isa(@profview(profile_test(10)), ProfileView.GtkWindow)
+        println("profiling done 2")
         data, lidict = Profile.retrieve()
+        println("retrieved profile data")
 
         Profile.clear()
         @profile profile_test(10)
@@ -193,4 +201,8 @@ end
     end
 end
 
-include("extensions.jl")
+if Base.pkgversion(Cthulhu) < v"3.0.0-"
+    include("extensions_Cthulhu2.jl")
+else
+    include("extensions.jl")
+end
